@@ -1,14 +1,13 @@
-﻿using Blog.Core.Common;
-using Microsoft.IdentityModel.Tokens;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
+using Blog.Core.Common;
+using Microsoft.IdentityModel.Tokens;
 
-namespace Blog.Core.AuthHelper
+namespace Blog.Core.AuthHelper.OverWrite
 {
     public class JwtHelper
     {
@@ -18,10 +17,8 @@ namespace Blog.Core.AuthHelper
         /// </summary>
         /// <param name="tokenModel"></param>
         /// <returns></returns>
-        public static string IssueJWT(TokenModelJWT tokenModel)
+        public static string IssueJwt(TokenModelJwt tokenModel)
         {
-            var dateTime = DateTime.UtcNow;
-
             string iss = Appsettings.app(new string[] { "Audience", "Issuer" });
             string aud = Appsettings.app(new string[] { "Audience", "Audience" });
             string secret = Appsettings.app(new string[] { "Audience", "Secret" });
@@ -47,7 +44,7 @@ namespace Blog.Core.AuthHelper
 
 
 
-            //秘钥
+            //秘钥 (SymmetricSecurityKey 对安全性的要求，密钥的长度太短会报出异常)
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -67,11 +64,11 @@ namespace Blog.Core.AuthHelper
         /// </summary>
         /// <param name="jwtStr"></param>
         /// <returns></returns>
-        public static TokenModelJWT SerializeJWT(string jwtStr)
+        public static TokenModelJwt SerializeJwt(string jwtStr)
         {
             var jwtHandler = new JwtSecurityTokenHandler();
             JwtSecurityToken jwtToken = jwtHandler.ReadJwtToken(jwtStr);
-            object role = new object(); ;
+            object role;
             try
             {
                 jwtToken.Payload.TryGetValue(ClaimTypes.Role, out role);
@@ -81,7 +78,7 @@ namespace Blog.Core.AuthHelper
                 Console.WriteLine(e);
                 throw;
             }
-            var tm = new TokenModelJWT
+            var tm = new TokenModelJwt
             {
                 Uid = (jwtToken.Id).ObjToInt(),
                 Role = role != null ? role.ObjToString() : "",
@@ -93,7 +90,7 @@ namespace Blog.Core.AuthHelper
     /// <summary>
     /// 令牌
     /// </summary>
-    public class TokenModelJWT
+    public class TokenModelJwt
     {
         /// <summary>
         /// Id

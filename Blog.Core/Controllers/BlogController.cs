@@ -6,10 +6,8 @@ using Blog.Core.Common;
 using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
 using Blog.Core.Model.Models;
-using Blog.Core.Model.ViewModels;
 using Blog.Core.SwaggerHelper;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Profiling;
 using static Blog.Core.SwaggerHelper.CustomApiVersion;
@@ -19,26 +17,22 @@ namespace Blog.Core.Controllers
     /// <summary>
     /// Blog控制器所有接口
     /// </summary>
-    [Authorize(Policy = "Admin")]
     [Produces("application/json")]
     [Route("api/Blog")]
     public class BlogController : Controller
     {
-        IAdvertisementServices advertisementServices;
-        IBlogArticleServices blogArticleServices;
-        IRedisCacheManager redisCacheManager;
+        readonly IBlogArticleServices _blogArticleServices;
+        readonly IRedisCacheManager _redisCacheManager;
 
         /// <summary>
         /// 构造函数
         /// </summary>
-        /// <param name="advertisementServices"></param>
         /// <param name="blogArticleServices"></param>
         /// <param name="redisCacheManager"></param>
-        public BlogController(IAdvertisementServices advertisementServices, IBlogArticleServices blogArticleServices, IRedisCacheManager redisCacheManager)
+        public BlogController(IBlogArticleServices blogArticleServices, IRedisCacheManager redisCacheManager)
         {
-            this.advertisementServices = advertisementServices;
-            this.blogArticleServices = blogArticleServices;
-            this.redisCacheManager = redisCacheManager;
+            _blogArticleServices = blogArticleServices;
+            _redisCacheManager = redisCacheManager;
         }
 
 
@@ -54,28 +48,36 @@ namespace Blog.Core.Controllers
         public async Task<object> Get(int id, int page = 1, string bcategory = "技术博文")
         {
             int intTotalCount = 6;
-            int Total = 0;
-            int TotalCount = 1;
+            int total;
+            int totalCount = 1;
             List<BlogArticle> blogArticleList = new List<BlogArticle>();
 
             using (MiniProfiler.Current.Step("开始加载数据："))
             {
-                if (redisCacheManager.Get<object>("Redis.Blog") != null)
+                try
                 {
-                    MiniProfiler.Current.Step("从Redis服务器中加载数据：");
-                    blogArticleList = redisCacheManager.Get<List<BlogArticle>>("Redis.Blog");
-                }
-                else
-                {
-                    MiniProfiler.Current.Step("从MSSQL服务器中加载数据：");
-                    blogArticleList = await blogArticleServices.Query(a => a.bcategory == bcategory);
-                    redisCacheManager.Set("Redis.Blog", blogArticleList, TimeSpan.FromHours(2));
-                }
+                    if (_redisCacheManager.Get<object>("Redis.Blog") != null)
+                    {
+                        MiniProfiler.Current.Step("从Redis服务器中加载数据：");
+                        blogArticleList = _redisCacheManager.Get<List<BlogArticle>>("Redis.Blog");
+                    }
+                    else
+                    {
+                        MiniProfiler.Current.Step("从MSSQL服务器中加载数据：");
+                        blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory);
+                        _redisCacheManager.Set("Redis.Blog", blogArticleList, TimeSpan.FromHours(2));
+                    }
 
+                }
+                catch (Exception e)
+                {
+                    MiniProfiler.Current.CustomTiming("Errors：", e.Message);
+                    blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory);
+                }
             }
 
-            Total = blogArticleList.Count();
-            TotalCount = blogArticleList.Count() / intTotalCount;
+            total = blogArticleList.Count();
+            totalCount = blogArticleList.Count() / intTotalCount;
 
             using (MiniProfiler.Current.Step("获取成功后，开始处理最终数据"))
             {
@@ -99,8 +101,8 @@ namespace Blog.Core.Controllers
             {
                 success = true,
                 page = page,
-                total= Total,
-                pageCount = TotalCount,
+                total = total,
+                pageCount = totalCount,
                 data = blogArticleList
             });
         }
@@ -113,9 +115,25 @@ namespace Blog.Core.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpGet("{id}")]
+        [Authorize(Roles = "Admin")]
+        //[Authorize("Permission")]
         public async Task<object> Get(int id)
         {
-            var model = await blogArticleServices.getBlogDetails(id);
+            var model = await _blogArticleServices.GetBlogDetails(id);
+            return Ok(new
+            {
+                success = true,
+                data = model
+            });
+        }
+
+
+
+        [HttpGet]
+        [Route("DetailNuxtNoPer")]
+        public async Task<object> DetailNuxtNoPer(int id)
+        {
+            var model = await _blogArticleServices.GetBlogDetails(id);
             return Ok(new
             {
                 success = true,
@@ -135,7 +153,7 @@ namespace Blog.Core.Controllers
         //[Route("/api/v2/blog/Blogtest")]
 
         //和上边的版本控制以及路由地址都是一样的
-        [CustomRoute(ApiVersions.v2, "Blogtest")]
+        [CustomRoute(ApiVersions.V2, "Blogtest")]
         public async Task<object> V2_Blogtest()
         {
             return Ok(new { status = 220, data = "我是第二版的博客信息" });

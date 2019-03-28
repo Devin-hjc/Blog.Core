@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using Blog.Core.SwaggerHelper;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using static Blog.Core.SwaggerHelper.CustomApiVersion;
 
@@ -22,7 +18,7 @@ namespace Blog.Core.Controllers.v1
         /************************************************/
 
         [HttpGet]
-        [CustomRoute(ApiVersions.v1, "apbs")]
+        [CustomRoute(ApiVersions.V1, "apbs")]
         public IEnumerable<string> Get()
         {
             return new string[] { "第一版的 apbs" };

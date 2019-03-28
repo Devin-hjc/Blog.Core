@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using AutoMapper;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
@@ -24,9 +21,9 @@ namespace Blog.Core.Controllers
     public class ValuesController : ControllerBase
     {
         private IMapper _mapper;
-        private IAdvertisementServices _advertisementServices;
-        private Love _love;
-        IRoleModulePermissionServices _roleModulePermissionServices;
+        private readonly IAdvertisementServices _advertisementServices;
+        private readonly Love _love;
+        readonly IRoleModulePermissionServices _roleModulePermissionServices;
 
         /// <summary>
         /// ValuesController
@@ -78,6 +75,21 @@ namespace Blog.Core.Controllers
 
             return "value";
         }
+
+        /// <summary>
+        /// 参数必填项
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("/api/values/RequiredPara")]
+        public string RequiredP([Required]string id)
+        {
+            return id;
+        }
+
+
+
         /// <summary>
         /// post
         /// </summary>

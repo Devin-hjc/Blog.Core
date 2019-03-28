@@ -13,11 +13,11 @@ namespace Blog.Core.Services
 {
     public class TopicDetailServices : BaseServices<TopicDetail>, ITopicDetailServices
     {
-        ITopicDetailRepository dal;
+        ITopicDetailRepository _dal;
         public TopicDetailServices(ITopicDetailRepository dal)
         {
-            this.dal = dal;
-            base.baseDal = dal;
+            this._dal = dal;
+            base.BaseDal = dal;
         }
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace Blog.Core.Services
         [Caching(AbsoluteExpiration = 10)]
         public async Task<List<TopicDetail>> GetTopicDetails()
         {
-            return await dal.Query(a => !a.tdIsDelete && a.tdSectendDetail == "tbug");
+            return await base.Query(a => !a.tdIsDelete && a.tdSectendDetail == "tbug");
         }
     }
 }

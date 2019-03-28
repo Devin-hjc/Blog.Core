@@ -35,36 +35,36 @@
             实例化缓存接口ICaching
             </summary>
         </member>
-        <member name="M:Blog.Core.AuthHelper.JwtHelper.IssueJWT(Blog.Core.AuthHelper.TokenModelJWT)">
+        <member name="M:Blog.Core.AuthHelper.OverWrite.JwtHelper.IssueJwt(Blog.Core.AuthHelper.OverWrite.TokenModelJwt)">
             <summary>
             颁发JWT字符串
             </summary>
             <param name="tokenModel"></param>
             <returns></returns>
         </member>
-        <member name="M:Blog.Core.AuthHelper.JwtHelper.SerializeJWT(System.String)">
+        <member name="M:Blog.Core.AuthHelper.OverWrite.JwtHelper.SerializeJwt(System.String)">
             <summary>
             解析
             </summary>
             <param name="jwtStr"></param>
             <returns></returns>
         </member>
-        <member name="T:Blog.Core.AuthHelper.TokenModelJWT">
+        <member name="T:Blog.Core.AuthHelper.OverWrite.TokenModelJwt">
             <summary>
             令牌
             </summary>
         </member>
-        <member name="P:Blog.Core.AuthHelper.TokenModelJWT.Uid">
+        <member name="P:Blog.Core.AuthHelper.OverWrite.TokenModelJwt.Uid">
             <summary>
             Id
             </summary>
         </member>
-        <member name="P:Blog.Core.AuthHelper.TokenModelJWT.Role">
+        <member name="P:Blog.Core.AuthHelper.OverWrite.TokenModelJwt.Role">
             <summary>
             角色
             </summary>
         </member>
-        <member name="P:Blog.Core.AuthHelper.TokenModelJWT.Work">
+        <member name="P:Blog.Core.AuthHelper.OverWrite.TokenModelJwt.Work">
             <summary>
             职能
             </summary>
@@ -115,7 +115,7 @@
             验证方案提供对象
             </summary>
         </member>
-        <member name="P:Blog.Core.AuthHelper.PermissionHandler._roleModulePermissionServices">
+        <member name="P:Blog.Core.AuthHelper.PermissionHandler.roleModulePermissionServices">
             <summary>
             services 层注入
             </summary>
@@ -213,11 +213,10 @@
             Blog控制器所有接口
             </summary>
         </member>
-        <member name="M:Blog.Core.Controllers.BlogController.#ctor(Blog.Core.IServices.IAdvertisementServices,Blog.Core.IServices.IBlogArticleServices,Blog.Core.Common.IRedisCacheManager)">
+        <member name="M:Blog.Core.Controllers.BlogController.#ctor(Blog.Core.IServices.IBlogArticleServices,Blog.Core.Common.IRedisCacheManager)">
             <summary>
             构造函数
             </summary>
-            <param name="advertisementServices"></param>
             <param name="blogArticleServices"></param>
             <param name="redisCacheManager"></param>
         </member>
@@ -248,7 +247,7 @@
             
             </summary>
         </member>
-        <member name="M:Blog.Core.Controllers.LoginController.#ctor(Blog.Core.IServices.IsysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices,Blog.Core.AuthHelper.PermissionRequirement)">
+        <member name="M:Blog.Core.Controllers.LoginController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices,Blog.Core.AuthHelper.PermissionRequirement)">
             <summary>
             构造函数注入
             </summary>
@@ -257,7 +256,7 @@
             <param name="roleServices"></param>
             <param name="requirement"></param>
         </member>
-        <member name="M:Blog.Core.Controllers.LoginController.GetJWTStr(System.String,System.String)">
+        <member name="M:Blog.Core.Controllers.LoginController.GetJwtStr(System.String,System.String)">
             <summary>
             获取JWT的方法
             </summary>
@@ -265,7 +264,7 @@
             <param name="sub">角色</param>
             <returns></returns>
         </member>
-        <member name="M:Blog.Core.Controllers.LoginController.GetJWTToken3(System.String,System.String)">
+        <member name="M:Blog.Core.Controllers.LoginController.GetJwtToken3(System.String,System.String)">
             <summary>
             获取JWT的方法 3.0
             </summary>
@@ -287,14 +286,14 @@
             <summary>
             构造函数
             </summary>
-            <param name="ModuleServices"></param>
+            <param name="moduleServices"></param>
         </member>
         <member name="M:Blog.Core.Controllers.PermissionController.#ctor(Blog.Core.IServices.IPermissionServices,Blog.Core.IServices.IModuleServices,Blog.Core.IServices.IRoleModulePermissionServices,Blog.Core.IServices.IUserRoleServices)">
             <summary>
             构造函数
             </summary>
-            <param name="PermissionServices"></param>
-            <param name="ModuleServices"></param>
+            <param name="permissionServices"></param>
+            <param name="moduleServices"></param>
             <param name="roleModulePermissionServices"></param>
             <param name="userRoleServices"></param>
         </member>
@@ -319,7 +318,7 @@
             <param name="tname">专题类型</param>
             <returns></returns>
         </member>
-        <member name="M:Blog.Core.Controllers.UserController.#ctor(Blog.Core.IServices.IsysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices)">
+        <member name="M:Blog.Core.Controllers.UserController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices)">
             <summary>
             构造函数
             </summary>
@@ -339,7 +338,7 @@
             用户权限控制器所有接口
             </summary>
         </member>
-        <member name="M:Blog.Core.Controllers.UserRoleController.#ctor(Blog.Core.IServices.IsysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices)">
+        <member name="M:Blog.Core.Controllers.UserRoleController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices)">
             <summary>
             构造函数
             </summary>
@@ -352,7 +351,7 @@
             新建用户
             </summary>
             <param name="loginName"></param>
-            <param name="loginPWD"></param>
+            <param name="loginPwd"></param>
             <returns></returns>
         </member>
         <member name="M:Blog.Core.Controllers.UserRoleController.AddRole(System.String)">
@@ -393,6 +392,13 @@
         <member name="M:Blog.Core.Controllers.ValuesController.Get(System.Int32)">
             <summary>
             Get(int id)方法
+            </summary>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Blog.Core.Controllers.ValuesController.RequiredP(System.String)">
+            <summary>
+            参数必填项
             </summary>
             <param name="id"></param>
             <returns></returns>
@@ -787,12 +793,12 @@
             Api接口版本 自定义
             </summary>
         </member>
-        <member name="F:Blog.Core.SwaggerHelper.CustomApiVersion.ApiVersions.v1">
+        <member name="F:Blog.Core.SwaggerHelper.CustomApiVersion.ApiVersions.V1">
             <summary>
             v1 版本
             </summary>
         </member>
-        <member name="F:Blog.Core.SwaggerHelper.CustomApiVersion.ApiVersions.v2">
+        <member name="F:Blog.Core.SwaggerHelper.CustomApiVersion.ApiVersions.V2">
             <summary>
             v2 版本
             </summary>

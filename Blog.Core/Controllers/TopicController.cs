@@ -1,11 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
@@ -14,7 +11,7 @@ namespace Blog.Core.Controllers
     [ApiController]
     public class TopicController : ControllerBase
     {
-        ITopicServices _topicServices;
+        readonly ITopicServices _topicServices;
 
         public TopicController(ITopicServices topicServices)
         {
@@ -25,8 +22,7 @@ namespace Blog.Core.Controllers
         [HttpGet]
         public async Task<MessageModel<List<Topic>>> Get()
         {
-            var data = new MessageModel<List<Topic>>();
-            data.response = await _topicServices.GetTopics();
+            var data = new MessageModel<List<Topic>> {response = await _topicServices.GetTopics()};
             if (data.response != null)
             {
                 data.success = true;
