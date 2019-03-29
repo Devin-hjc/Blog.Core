@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
@@ -16,7 +14,7 @@ namespace Blog.Core.Controllers
     [Authorize("Permission")]
     public class RoleController : ControllerBase
     {
-        IRoleServices _roleServices;
+        readonly IRoleServices _roleServices;
 
         /// <summary>
         /// 构造函数
@@ -33,35 +31,34 @@ namespace Blog.Core.Controllers
         {
             var data = new MessageModel<PageModel<Role>>();
             int intTotalCount = 50;
-            int TotalCount = 0;
-            int PageCount = 1;
-            List<Role> Roles = new List<Role>();
+            int totalCount = 0;
+            int pageCount = 1;
 
-            Roles = await _roleServices.Query(a => a.IsDeleted != true );
+            var roles = await _roleServices.Query(a => a.IsDeleted != true );
 
             if (!string.IsNullOrEmpty(key))
             {
-                Roles = Roles.Where(t => (t.Name != null && t.Name.Contains(key))).ToList();
+                roles = roles.Where(t => (t.Name != null && t.Name.Contains(key))).ToList();
             }
 
 
             //筛选后的数据总数
-            TotalCount = Roles.Count;
+            totalCount = roles.Count;
             //筛选后的总页数
-            PageCount = (Math.Ceiling(TotalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
+            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
 
-            Roles = Roles.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
+            roles = roles.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
 
             return new MessageModel<PageModel<Role>>()
             {
                 msg = "获取成功",
-                success = TotalCount >= 0,
+                success = totalCount >= 0,
                 response = new PageModel<Role>()
                 {
                     page = page,
-                    pageCount = PageCount,
-                    dataCount = TotalCount,
-                    data = Roles,
+                    pageCount = pageCount,
+                    dataCount = totalCount,
+                    data = roles,
                 }
             };
 
@@ -76,11 +73,11 @@ namespace Blog.Core.Controllers
 
         // POST: api/User
         [HttpPost]
-        public async Task<MessageModel<string>> Post([FromBody] Role Role)
+        public async Task<MessageModel<string>> Post([FromBody] Role role)
         {
             var data = new MessageModel<string>();
 
-            var id = (await _roleServices.Add(Role));
+            var id = (await _roleServices.Add(role));
             data.success = id > 0;
             if (data.success)
             {
@@ -93,16 +90,16 @@ namespace Blog.Core.Controllers
 
         // PUT: api/User/5
         [HttpPut]
-        public async Task<MessageModel<string>> Put([FromBody] Role Role)
+        public async Task<MessageModel<string>> Put([FromBody] Role role)
         {
             var data = new MessageModel<string>();
-            if (Role != null && Role.Id > 0)
+            if (role != null && role.Id > 0)
             {
-                data.success = await _roleServices.Update(Role);
+                data.success = await _roleServices.Update(role);
                 if (data.success)
                 {
                     data.msg = "更新成功";
-                    data.response = Role?.Id.ObjToString();
+                    data.response = role?.Id.ObjToString();
                 }
             }
 
@@ -116,7 +113,7 @@ namespace Blog.Core.Controllers
             var data = new MessageModel<string>();
             if (id > 0)
             {
-                var userDetail = await _roleServices.QueryByID(id);
+                var userDetail = await _roleServices.QueryById(id);
                 userDetail.IsDeleted = true;
                 data.success = await _roleServices.Update(userDetail);
                 if (data.success)

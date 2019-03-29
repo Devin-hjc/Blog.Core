@@ -14,11 +14,11 @@ namespace Blog.Core.Services
 	public class RoleServices : BaseServices<Role>, IRoleServices
     {
 	
-        IRoleRepository dal;
+        IRoleRepository _dal;
         public RoleServices(IRoleRepository dal)
         {
-            this.dal = dal;
-            base.baseDal = dal;
+            this._dal = dal;
+            base.BaseDal = dal;
         }
        /// <summary>
        /// 
@@ -29,15 +29,15 @@ namespace Blog.Core.Services
         {
             Role role = new Role(roleName);
             Role model = new Role();
-            var userList = await dal.Query(a => a.Name == role.Name && a.Enabled);
+            var userList = await base.Query(a => a.Name == role.Name && a.Enabled);
             if (userList.Count > 0)
             {
                 model = userList.FirstOrDefault();
             }
             else
             {
-                var id = await dal.Add(role);
-                model = await dal.QueryByID(id);
+                var id = await base.Add(role);
+                model = await base.QueryById(id);
             }
 
             return model;
@@ -47,7 +47,7 @@ namespace Blog.Core.Services
         [Caching(AbsoluteExpiration = 30)]
         public async Task<string> GetRoleNameByRid(int rid)
         {
-            return ((await dal.QueryByID(rid))?.Name);
+            return ((await base.QueryById(rid))?.Name);
         }
     }
 }

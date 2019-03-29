@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Blog.Core.AuthHelper;
+using Blog.Core.AuthHelper.OverWrite;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
@@ -17,9 +16,9 @@ namespace Blog.Core.Controllers
     [Authorize("Permission")]
     public class UserController : ControllerBase
     {
-        IsysUserInfoServices _sysUserInfoServices;
-        IUserRoleServices _userRoleServices;
-        IRoleServices _roleServices;
+        readonly ISysUserInfoServices _sysUserInfoServices;
+        readonly IUserRoleServices _userRoleServices;
+        readonly IRoleServices _roleServices;
 
         /// <summary>
         /// 构造函数
@@ -27,7 +26,7 @@ namespace Blog.Core.Controllers
         /// <param name="sysUserInfoServices"></param>
         /// <param name="userRoleServices"></param>
         /// <param name="roleServices"></param>
-        public UserController(IsysUserInfoServices sysUserInfoServices, IUserRoleServices userRoleServices, IRoleServices roleServices)
+        public UserController(ISysUserInfoServices sysUserInfoServices, IUserRoleServices userRoleServices, IRoleServices roleServices)
         {
             _sysUserInfoServices = sysUserInfoServices;
             _userRoleServices = userRoleServices;
@@ -40,8 +39,8 @@ namespace Blog.Core.Controllers
         {
             var data = new MessageModel<PageModel<sysUserInfo>>();
             int intTotalCount = 50;
-            int TotalCount = 0;
-            int PageCount = 1;
+            int totalCount = 0;
+            int pageCount = 1;
             List<sysUserInfo> sysUserInfos = new List<sysUserInfo>();
 
             sysUserInfos = await _sysUserInfoServices.Query(a => a.tdIsDelete != true && a.uStatus >= 0);
@@ -53,9 +52,9 @@ namespace Blog.Core.Controllers
 
 
             //筛选后的数据总数
-            TotalCount = sysUserInfos.Count;
+            totalCount = sysUserInfos.Count;
             //筛选后的总页数
-            PageCount = (Math.Ceiling(TotalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
+            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
 
             sysUserInfos = sysUserInfos.OrderByDescending(d => d.uID).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
 
@@ -64,22 +63,20 @@ namespace Blog.Core.Controllers
             var allRoles = await _roleServices.Query(d => d.IsDeleted == false);
             foreach (var item in sysUserInfos)
             {
-                if (item != null)
-                {
-                    item.RID = (allUserRoles.Where(d => d.UserId == item.uID).FirstOrDefault()?.RoleId).ObjToInt();
-                    item.RoleName = allRoles.Where(d=>d.Id==item.RID).FirstOrDefault()?.Name;
-                }
+                item.uLoginPWD = "no see me";
+                item.RID = (allUserRoles.FirstOrDefault(d => d.UserId == item.uID)?.RoleId).ObjToInt();
+                item.RoleName = allRoles.FirstOrDefault(d => d.Id==item.RID)?.Name;
             }
 
             return new MessageModel<PageModel<sysUserInfo>>()
             {
                 msg = "获取成功",
-                success = TotalCount >= 0,
+                success = totalCount >= 0,
                 response = new PageModel<sysUserInfo>()
                 {
                     page = page,
-                    pageCount = PageCount,
-                    dataCount = TotalCount,
+                    pageCount = pageCount,
+                    dataCount = totalCount,
                     data = sysUserInfos,
                 }
             };
@@ -106,10 +103,10 @@ namespace Blog.Core.Controllers
             var data = new MessageModel<sysUserInfo>();
             if (!string.IsNullOrEmpty(token))
             {
-                var tokenModel = JwtHelper.SerializeJWT(token);
+                var tokenModel = JwtHelper.SerializeJwt(token);
                 if (tokenModel != null && tokenModel.Uid > 0)
                 {
-                    var userinfo = await _sysUserInfoServices.QueryByID(tokenModel.Uid);
+                    var userinfo = await _sysUserInfoServices.QueryById(tokenModel.Uid);
                     if (userinfo != null)
                     {
                         data.response = userinfo;
@@ -173,7 +170,7 @@ namespace Blog.Core.Controllers
             var data = new MessageModel<string>();
             if (id > 0)
             {
-                var userDetail = await _sysUserInfoServices.QueryByID(id);
+                var userDetail = await _sysUserInfoServices.QueryById(id);
                 userDetail.tdIsDelete = true;
                 data.success = await _sysUserInfoServices.Update(userDetail);
                 if (data.success)

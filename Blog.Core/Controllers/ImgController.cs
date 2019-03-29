@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Blog.Core.Model;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
@@ -28,6 +27,23 @@ namespace Blog.Core.Controllers
             return "value";
         }
 
+        // GET: api/Download
+        [HttpGet]
+        [Route("down")]
+        public FileStreamResult DownImg()
+        {
+            var addrUrl = Directory.GetCurrentDirectory() + "\\微信截图_20190304212953.png";
+            var stream = System.IO.File.OpenRead(addrUrl);
+            string fileExt = ".jpg";  // 这里可以写一个获取文件扩展名的方法，获取扩展名
+            //获取文件的ContentType
+            var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+            var memi = provider.Mappings[fileExt];
+            var fileName = Path.GetFileName(addrUrl);
+
+
+            return File(stream, memi, fileName);
+        }
+
 
         [HttpPost]
         [Route("Pic")]
@@ -37,7 +53,7 @@ namespace Blog.Core.Controllers
             string path = string.Empty;
             string foldername = "images";
             var files = Request.Form.Files;
-            if (files == null || files.Count() <= 0) { data.msg = "请选择上传的文件。"; return data; }
+            if (files == null || !files.Any()) { data.msg = "请选择上传的文件。"; return data; }
             //格式限制
             var allowType = new string[] { "image/jpg", "image/png", "image/jpeg" };
 
@@ -102,5 +118,5 @@ namespace Blog.Core.Controllers
         {
         }
     }
-  
+
 }

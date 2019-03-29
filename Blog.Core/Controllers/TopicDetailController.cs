@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
@@ -16,8 +15,8 @@ namespace Blog.Core.Controllers
     [Authorize("Permission")]
     public class TopicDetailController : ControllerBase
     {
-        ITopicServices _topicServices;
-        ITopicDetailServices _topicDetailServices;
+        readonly ITopicServices _topicServices;
+        readonly ITopicDetailServices _topicDetailServices;
 
         /// <summary>
         /// TopicDetailController
@@ -42,18 +41,19 @@ namespace Blog.Core.Controllers
         {
             var data = new MessageModel<PageModel<TopicDetail>>();
             int intTotalCount = 6;
-            int TotalCount = 0;
-            int PageCount = 1;
-            List<TopicDetail> topicDetails = new List<TopicDetail>();
+            int totalCount = 0;
+            int pageCount = 1;
 
             //总数据，使用AOP切面缓存
             //topicDetails = await _topicDetailServices.GetTopicDetails();
-            topicDetails = await _topicDetailServices.Query(a => !a.tdIsDelete && a.tdSectendDetail == "tbug");
+            var topicDetails = await _topicDetailServices.Query(a => !a.tdIsDelete && a.tdSectendDetail == "tbug");
 
             if (!string.IsNullOrEmpty(key))
             {
                 topicDetails = topicDetails.Where(t => (t.tdName != null && t.tdName.Contains(key)) || (t.tdDetail != null && t.tdDetail.Contains(key))).ToList();
             }
+
+            tname = UnicodeHelper.UnicodeToString(tname);
 
             if (!string.IsNullOrEmpty(tname))
             {
@@ -62,21 +62,21 @@ namespace Blog.Core.Controllers
             }
 
             //筛选后的数据总数
-            TotalCount = topicDetails.Count;
+            totalCount = topicDetails.Count;
             //筛选后的总页数
-            PageCount = (Math.Ceiling(TotalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
+            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
 
             topicDetails = topicDetails.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
 
             return new MessageModel<PageModel<TopicDetail>>()
             {
                 msg = "获取成功",
-                success = TotalCount >= 0,
+                success = totalCount >= 0,
                 response = new PageModel<TopicDetail>()
                 {
                     page = page,
-                    pageCount = PageCount,
-                    dataCount = TotalCount,
+                    pageCount = pageCount,
+                    dataCount = totalCount,
                     data = topicDetails,
                 }
             };
@@ -89,7 +89,7 @@ namespace Blog.Core.Controllers
         public async Task<MessageModel<TopicDetail>> Get(int id)
         {
             var data = new MessageModel<TopicDetail>();
-            var response = await _topicDetailServices.QueryByID(id);
+            var response = await _topicDetailServices.QueryById(id);
             data.response = response.tdIsDelete ? null : response;
             if (data.response != null)
             {
@@ -149,7 +149,7 @@ namespace Blog.Core.Controllers
             var data = new MessageModel<string>();
             if (id > 0)
             {
-                var topicDetail = await _topicDetailServices.QueryByID(id);
+                var topicDetail = await _topicDetailServices.QueryById(id);
                 topicDetail.tdIsDelete = true;
                 data.success = await _topicDetailServices.Update(topicDetail);
                 if (data.success)
