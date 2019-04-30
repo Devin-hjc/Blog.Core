@@ -13,7 +13,9 @@ using AutoMapper;
 using Blog.Core.AOP;
 using Blog.Core.AuthHelper;
 using Blog.Core.Common;
+using Blog.Core.Common.MemoryCache;
 using Blog.Core.Filter;
+using Blog.Core.Hubs;
 using Blog.Core.Log;
 using Blog.Core.Model;
 using log4net;
@@ -47,7 +49,7 @@ namespace Blog.Core
         {
             Configuration = configuration;
             //log4net
-            repository = LogManager.CreateRepository("Blog.Core");
+            repository = LogManager.CreateRepository(Configuration["Logging:Log4Net:Name"]);
             //指定配置文件，如果这里你遇到问题，应该是使用了InProcess模式，请查看Blog.Core.csproj,并删之
             XmlConfigurator.Configure(repository, new FileInfo("log4net.config"));
 
@@ -189,6 +191,8 @@ namespace Blog.Core
             .AddJsonOptions(options => { options.SerializerSettings.ContractResolver = new DefaultContractResolver(); });
 
             #endregion
+
+            services.AddSignalR();
 
             #region Authorize权限设置三种情况
 
@@ -337,7 +341,7 @@ namespace Blog.Core
             try
             {
                 var servicesDllFile = Path.Combine(basePath, "Blog.Core.Services.dll");
-                var assemblysServices = Assembly.LoadFile(servicesDllFile);//直接采用加载文件的方法  ※※★※※ 如果你是第一次下载项目，请先F6编译，然后再F5执行，※※★※※
+                var assemblysServices = Assembly.LoadFrom(servicesDllFile);//直接采用加载文件的方法  ※※★※※ 如果你是第一次下载项目，请先F6编译，然后再F5执行，※※★※※
 
                 //builder.RegisterAssemblyTypes(assemblysServices).AsImplementedInterfaces();//指定已扫描程序集中的类型注册为提供所有其实现的接口。
 
@@ -352,7 +356,7 @@ namespace Blog.Core
                 {
                     cacheType.Add(typeof(BlogCacheAOP));
                 }
-                if (Appsettings.app(new string[] { "AppSettings", "LogoAOP", "Enabled" }).ObjToBool())
+                if (Appsettings.app(new string[] { "AppSettings", "LogAOP", "Enabled" }).ObjToBool())
                 {
                     cacheType.Add(typeof(BlogLogAOP));
                 }
@@ -368,12 +372,12 @@ namespace Blog.Core
 
                 #region Repository.dll 注入，有对应接口
                 var repositoryDllFile = Path.Combine(basePath, "Blog.Core.Repository.dll");
-                var assemblysRepository = Assembly.LoadFile(repositoryDllFile);
+                var assemblysRepository = Assembly.LoadFrom(repositoryDllFile);
                 builder.RegisterAssemblyTypes(assemblysRepository).AsImplementedInterfaces();
             }
             catch (Exception)
             {
-                throw new Exception("※※★※※ 如果你是第一次下载项目，请先F6编译，然后再F5执行，因为解耦了，如果你是发布的模式，请检查bin文件夹是否存在Repository.dll和service.dll ※※★※※");
+                throw new Exception("※※★※※ 如果你是第一次下载项目，请先对整个解决方案dotnet build（F6编译），然后再对api层 dotnet run（F5执行），\n因为解耦了，如果你是发布的模式，请检查bin文件夹是否存在Repository.dll和service.dll ※※★※※");
             }
             #endregion
             #endregion
@@ -427,9 +431,6 @@ namespace Blog.Core
             }
             #endregion
 
-            #region MiniProfiler
-            app.UseMiniProfiler();
-            #endregion
 
             #region Swagger
             app.UseSwagger();
@@ -446,10 +447,14 @@ namespace Blog.Core
             });
             #endregion
 
+            #region MiniProfiler
+            app.UseMiniProfiler();
+            #endregion
+
             #region Authen
 
-            //此授权认证方法已经放弃，请使用下边的官方验证方法。但是如果你还想传User的全局变量，还是可以继续使用中间件
-            //app.UseMiddleware<JwtTokenAuth>();
+            //此授权认证方法已经放弃，请使用下边的官方验证方法。但是如果你还想传User的全局变量，还是可以继续使用中间件，第二种写法//app.UseMiddleware<JwtTokenAuth>(); 
+            //app.UserJwtTokenAuth(); 
 
             //如果你想使用官方认证，必须在上边ConfigureService 中，配置JWT的认证服务 (.AddAuthentication 和 .AddJwtBearer 二者缺一不可)
             app.UseAuthentication();
@@ -478,6 +483,14 @@ namespace Blog.Core
             app.UseStatusCodePages();//把错误码返回前台，比如是404
 
             app.UseMvc();
+
+
+            app.UseSignalR(routes =>
+            {
+                //这里要说下，为啥地址要写 /api/xxx 
+                //因为我前后端分离了，而且使用的是代理模式，所以如果你不用/api/xxx的这个规则的话，会出现跨域问题，毕竟这个不是我的controller的路由，而且自己定义的路由
+                routes.MapHub<ChatHub>("/api/chatHub");
+            });
         }
 
     }

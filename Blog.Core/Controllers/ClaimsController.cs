@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
 {
-    //[Authorize("Permission")]
-    [Route("api/Claims")]
+    //[Authorize(PermissionNames.Permission)]
+    [Route("api/Claims/[action]")]
     [ApiController]
     public class ClaimsController : Controller
     {
         // *****这是一个测试的控制器，主要为了测试基于Claim的验证机制*****
-        // *****[Authorize("Permission")]*****
+        // *****[Authorize(PermissionNames.Permission)]*****
 
 
 
@@ -44,6 +44,17 @@ namespace Blog.Core.Controllers
         [HttpDelete("{id}")]
         public void Delete(int id)
         {
+        }
+
+        /// <summary>
+        /// 测试批量删除，如果是axios，记得要把数组格式化成 stringQuery
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        [HttpDelete]
+        public IEnumerable<string> BatchDelete(string[] ids)
+        {
+            return ids;
         }
     }
 }

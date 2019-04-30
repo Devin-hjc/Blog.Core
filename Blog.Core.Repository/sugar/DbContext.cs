@@ -1,7 +1,13 @@
-﻿using SqlSugar;
+﻿using Blog.Core.Common.LogHelper;
+using Blog.Core.Log;
+using SqlSugar;
+using StackExchange.Profiling;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Blog.Core.Repository
 {
@@ -11,6 +17,7 @@ namespace Blog.Core.Repository
         private static string _connectionString;
         private static DbType _dbType;
         private SqlSugarClient _db;
+        private readonly ILoggerHelper _loggerHelper = new LogHelper();
 
         /// <summary>
         /// 连接字符串 
@@ -58,34 +65,8 @@ namespace Blog.Core.Repository
         /// 功能描述:构造函数
         /// 作　　者:Blog.Core
         /// </summary>
-        private DbContext()
-        {
-            if (string.IsNullOrEmpty(_connectionString))
-                throw new ArgumentNullException("数据库连接字符串为空");
-            _db = new SqlSugarClient(new ConnectionConfig()
-            {
-                ConnectionString = _connectionString,
-                DbType = _dbType,
-                IsAutoCloseConnection = true,
-                IsShardSameThread = true,
-                ConfigureExternalServices = new ConfigureExternalServices()
-                {
-                    //DataInfoCacheService = new HttpRuntimeCache()
-                },
-                MoreSettings = new ConnMoreSettings()
-                {
-                    //IsWithNoLockQuery = true,
-                    IsAutoRemoveDataCache = true
-                }
-            });
-        }
-
-        /// <summary>
-        /// 功能描述:构造函数
-        /// 作　　者:Blog.Core
-        /// </summary>
         /// <param name="blnIsAutoCloseConnection">是否自动关闭连接</param>
-        private DbContext(bool blnIsAutoCloseConnection)
+        private DbContext(bool blnIsAutoCloseConnection = true)
         {
             if (string.IsNullOrEmpty(_connectionString))
                 throw new ArgumentNullException("数据库连接字符串为空");
@@ -94,7 +75,7 @@ namespace Blog.Core.Repository
                 ConnectionString = _connectionString,
                 DbType = _dbType,
                 IsAutoCloseConnection = blnIsAutoCloseConnection,
-                IsShardSameThread = true,
+                IsShardSameThread = false,
                 ConfigureExternalServices = new ConfigureExternalServices()
                 {
                     //DataInfoCacheService = new HttpRuntimeCache()
@@ -105,6 +86,22 @@ namespace Blog.Core.Repository
                     IsAutoRemoveDataCache = true
                 }
             });
+
+            //_db.Aop.OnLogExecuted = (sql, pars) => //SQL执行完事件
+            //{
+            //    OutSql2Log(sql, GetParas(pars));
+            //};
+
+            _db.Aop.OnLogExecuting = (sql, pars) => //SQL执行中事件
+            {
+                Parallel.For(0, 1, e =>
+                {
+                    MiniProfiler.Current.CustomTiming("SQL：", GetParas(pars) + "【SQL语句】：" + sql);
+                    LogLock.OutSql2Log("SqlLog", new string[] { GetParas(pars), "【SQL语句】：" + sql });
+
+                });
+            };
+
         }
 
         #region 实例方法
@@ -304,6 +301,19 @@ namespace {Namespace}
         #endregion
 
         #endregion
+
+        private string GetParas(SugarParameter[] pars)
+        {
+            string key = "【SQL参数】：";
+            foreach (var param in pars)
+            {
+                key += $"{param.ParameterName}:{param.Value}\n";
+            }
+
+            return key;
+        }
+
+
 
         #region 静态方法
 

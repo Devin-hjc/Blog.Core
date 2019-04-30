@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Blog.Core.Common;
 using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
+using Blog.Core.Model;
 using Blog.Core.Model.Models;
 using Blog.Core.SwaggerHelper;
 using Microsoft.AspNetCore.Authorization;
@@ -64,15 +65,15 @@ namespace Blog.Core.Controllers
                     else
                     {
                         MiniProfiler.Current.Step("从MSSQL服务器中加载数据：");
-                        blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory);
+                        blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory && a.IsDeleted != false);
                         _redisCacheManager.Set("Redis.Blog", blogArticleList, TimeSpan.FromHours(2));
                     }
 
                 }
                 catch (Exception e)
                 {
-                    MiniProfiler.Current.CustomTiming("Errors：", e.Message);
-                    blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory);
+                    MiniProfiler.Current.CustomTiming("Errors：", "Redis服务未启用，请开启该服务，并且请注意端口号，本项目使用的的6319，而且我的是没有设置密码。" + e.Message);
+                    blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory && a.IsDeleted == false);
                 }
             }
 
@@ -116,7 +117,7 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin")]
-        //[Authorize("Permission")]
+        //[Authorize(PermissionNames.Permission)]
         public async Task<object> Get(int id)
         {
             var model = await _blogArticleServices.GetBlogDetails(id);
@@ -160,6 +161,46 @@ namespace Blog.Core.Controllers
         }
 
 
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<MessageModel<string>> Post([FromBody] BlogArticle blogArticle)
+        {
+            var data = new MessageModel<string>();
+
+            blogArticle.bCreateTime = DateTime.Now;
+            blogArticle.bUpdateTime = DateTime.Now;
+
+            var id = (await _blogArticleServices.Add(blogArticle));
+            data.success = id > 0;
+            if (data.success)
+            {
+                data.response = id.ObjToString();
+                data.msg = "添加成功";
+            }
+
+            return data;
+        }
+
+        [HttpDelete]
+        [Authorize(PermissionNames.Permission)]
+        [Route("Delete")]
+        public async Task<MessageModel<string>> Delete(int id)
+        {
+            var data = new MessageModel<string>();
+            if (id > 0)
+            {
+                var blogArticle = await _blogArticleServices.QueryById(id);
+                blogArticle.IsDeleted = true;
+                data.success = await _blogArticleServices.Update(blogArticle);
+                if (data.success)
+                {
+                    data.msg = "删除成功";
+                    data.response = blogArticle?.bID.ObjToString();
+                }
+            }
+
+            return data;
+        }
 
     }
 }
