@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Blog.Core.AuthHelper.OverWrite;
+using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
@@ -11,6 +12,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
 {
+    /// <summary>
+    /// 用户管理
+    /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
     [Authorize(PermissionNames.Permission)]
@@ -33,52 +37,46 @@ namespace Blog.Core.Controllers
             _roleServices = roleServices;
         }
 
+        /// <summary>
+        /// 获取全部用户
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         // GET: api/User
         [HttpGet]
         public async Task<MessageModel<PageModel<sysUserInfo>>> Get(int page = 1, string key = "")
         {
-            var data = new MessageModel<PageModel<sysUserInfo>>();
-            int intTotalCount = 50;
-            int totalCount = 0;
-            int pageCount = 1;
-            List<sysUserInfo> sysUserInfos = new List<sysUserInfo>();
-
-            sysUserInfos = await _sysUserInfoServices.Query(a => a.tdIsDelete != true && a.uStatus >= 0);
-
-            if (!string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
             {
-                sysUserInfos = sysUserInfos.Where(t => (t.uLoginName != null && t.uLoginName.Contains(key)) || (t.uRealName != null && t.uRealName.Contains(key))).ToList();
+                key = "";
             }
+            int intPageSize = 50;
 
 
-            //筛选后的数据总数
-            totalCount = sysUserInfos.Count;
-            //筛选后的总页数
-            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
-
-            sysUserInfos = sysUserInfos.OrderByDescending(d => d.uID).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
+            var data = await _sysUserInfoServices.QueryPage(a => a.tdIsDelete != true && a.uStatus >= 0 && ((a.uLoginName != null && a.uLoginName.Contains(key)) || (a.uRealName != null && a.uRealName.Contains(key))), page, intPageSize, " uID desc ");
 
 
+            #region MyRegion
             var allUserRoles = await _userRoleServices.Query(d => d.IsDeleted == false);
             var allRoles = await _roleServices.Query(d => d.IsDeleted == false);
+
+            var sysUserInfos = data.data;
             foreach (var item in sysUserInfos)
             {
-                item.uLoginPWD = "no see me";
                 item.RID = (allUserRoles.FirstOrDefault(d => d.UserId == item.uID)?.RoleId).ObjToInt();
-                item.RoleName = allRoles.FirstOrDefault(d => d.Id==item.RID)?.Name;
+                item.RoleName = allRoles.FirstOrDefault(d => d.Id == item.RID)?.Name;
             }
+
+            data.data = sysUserInfos; 
+            #endregion
+
 
             return new MessageModel<PageModel<sysUserInfo>>()
             {
                 msg = "获取成功",
-                success = totalCount >= 0,
-                response = new PageModel<sysUserInfo>()
-                {
-                    page = page,
-                    pageCount = pageCount,
-                    dataCount = totalCount,
-                    data = sysUserInfos,
-                }
+                success = data.dataCount >= 0,
+                response = data
             };
 
         }
@@ -119,11 +117,18 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 添加一个用户
+        /// </summary>
+        /// <param name="sysUserInfo"></param>
+        /// <returns></returns>
         // POST: api/User
         [HttpPost]
         public async Task<MessageModel<string>> Post([FromBody] sysUserInfo sysUserInfo)
         {
             var data = new MessageModel<string>();
+
+            sysUserInfo.uLoginPWD= MD5Helper.MD5Encrypt32(sysUserInfo.uLoginPWD);
 
             var id = await _sysUserInfoServices.Add(sysUserInfo);
             data.success = id > 0;
@@ -136,10 +141,17 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 更新用户与角色
+        /// </summary>
+        /// <param name="sysUserInfo"></param>
+        /// <returns></returns>
         // PUT: api/User/5
         [HttpPut]
         public async Task<MessageModel<string>> Put([FromBody] sysUserInfo sysUserInfo)
         {
+            // 这里也要做后期处理，会有用户个人中心的业务
+
             var data = new MessageModel<string>();
             if (sysUserInfo != null && sysUserInfo.uID > 0)
             {
@@ -163,6 +175,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 删除用户
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // DELETE: api/ApiWithActions/5
         [HttpDelete]
         public async Task<MessageModel<string>> Delete(int id)

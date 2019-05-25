@@ -14,7 +14,6 @@ namespace Blog.Core.Common.LogHelper
     {
 
         static ReaderWriterLockSlim LogWriteLock = new ReaderWriterLockSlim();
-        static int LogCount = 100;
         static int WritedCount = 0;
         static int FailedCount = 0;
 
@@ -59,45 +58,102 @@ namespace Blog.Core.Common.LogHelper
             }
         }
 
+        public static string ReadLog(string Path, Encoding encode)
+        {
+            string s = "";
+            try
+            {
+                LogWriteLock.EnterReadLock();
+
+                if (!System.IO.File.Exists(Path))
+                {
+                    s = null;
+                }
+                else
+                {
+                    StreamReader f2 = new StreamReader(Path, encode);
+                    s = f2.ReadToEnd();
+                    f2.Close();
+                    f2.Dispose();
+                }
+            }
+            catch (Exception)
+            {
+                FailedCount++;
+            }
+            finally
+            {
+                LogWriteLock.ExitReadLock();
+            }
+            return s;
+        }
+
 
         public static List<LogInfo> GetLogData()
         {
-            var aopLogs = FileHelper.ReadFile(Path.Combine(Directory.GetCurrentDirectory(), "Log", "AOPLog.log"), Encoding.UTF8)
-           .Split("--------------------------------")
-           .Where(d => !string.IsNullOrEmpty(d) && d != "\n" && d != "\r\n")
-           .Select(d => new LogInfo
-           {
-               Datetime = d.Split("|")[0].ObjToDate(),
-               Content = d.Split("|")[1]?.Replace("\r\n", "<br>"),
-               LogColor = "AOP",
-           }).ToList();
-
-
-            var excLogs = FileHelper.ReadFile(Path.Combine(Directory.GetCurrentDirectory(), "Log", $"GlobalExcepLogs_{System.DateTime.Now.ToString("yyyMMdd")}.log"), Encoding.UTF8)
-                .Split("--------------------------------")
-                .Where(d => !string.IsNullOrEmpty(d) && d != "\n" && d != "\r\n")
-                .Select(d => new LogInfo
-                {
-                    Datetime = (d.Split("|")[0]).Split(',')[0].ObjToDate(),
-                    Content = d.Split("|")[1]?.Replace("\r\n", "<br>"),
-                    LogColor = "EXC",
-                    Import=9,
-                }).ToList();
-
-
-            var sqlLogs = FileHelper.ReadFile(Path.Combine(Directory.GetCurrentDirectory(), "Log", "SqlLog.log"), Encoding.UTF8)
+            List<LogInfo> aopLogs = new List<LogInfo>();
+            List<LogInfo> excLogs = new List<LogInfo>();
+            List<LogInfo> sqlLogs = new List<LogInfo>();
+            try
+            {
+                aopLogs = ReadLog(Path.Combine(Directory.GetCurrentDirectory(), "Log", "AOPLog.log"), Encoding.UTF8)
                 .Split("--------------------------------")
                 .Where(d => !string.IsNullOrEmpty(d) && d != "\n" && d != "\r\n")
                 .Select(d => new LogInfo
                 {
                     Datetime = d.Split("|")[0].ObjToDate(),
                     Content = d.Split("|")[1]?.Replace("\r\n", "<br>"),
-                    LogColor = "SQL",
+                    LogColor = "AOP",
                 }).ToList();
 
-            aopLogs.AddRange(excLogs);
-            aopLogs.AddRange(sqlLogs);
-            aopLogs = aopLogs.OrderByDescending(d=>d.Import).ThenByDescending(d => d.Datetime).Take(100).ToList();
+            }
+            catch (Exception)
+            {
+            }
+
+            try
+            {
+                excLogs = ReadLog(Path.Combine(Directory.GetCurrentDirectory(), "Log", $"GlobalExcepLogs_{DateTime.Now.ToString("yyyMMdd")}.log"), Encoding.UTF8)?
+                      .Split("--------------------------------")
+                      .Where(d => !string.IsNullOrEmpty(d) && d != "\n" && d != "\r\n")
+                      .Select(d => new LogInfo
+                      {
+                          Datetime = (d.Split("|")[0]).Split(',')[0].ObjToDate(),
+                          Content = d.Split("|")[1]?.Replace("\r\n", "<br>"),
+                          LogColor = "EXC",
+                          Import = 9,
+                      }).ToList();
+            }
+            catch (Exception)
+            {
+            }
+
+
+            try
+            {
+                sqlLogs = ReadLog(Path.Combine(Directory.GetCurrentDirectory(), "Log", "SqlLog.log"), Encoding.UTF8)
+                      .Split("--------------------------------")
+                      .Where(d => !string.IsNullOrEmpty(d) && d != "\n" && d != "\r\n")
+                      .Select(d => new LogInfo
+                      {
+                          Datetime = d.Split("|")[0].ObjToDate(),
+                          Content = d.Split("|")[1]?.Replace("\r\n", "<br>"),
+                          LogColor = "SQL",
+                      }).ToList();
+            }
+            catch (Exception)
+            {
+            }
+
+            if (excLogs != null)
+            {
+                aopLogs.AddRange(excLogs);
+            }
+            if (sqlLogs != null)
+            {
+                aopLogs.AddRange(sqlLogs);
+            }
+            aopLogs = aopLogs.OrderByDescending(d => d.Import).ThenByDescending(d => d.Datetime).Take(100).ToList();
 
             return aopLogs;
         }

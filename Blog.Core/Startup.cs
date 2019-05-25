@@ -13,6 +13,7 @@ using AutoMapper;
 using Blog.Core.AOP;
 using Blog.Core.AuthHelper;
 using Blog.Core.Common;
+using Blog.Core.Common.HttpContextUser;
 using Blog.Core.Common.MemoryCache;
 using Blog.Core.Filter;
 using Blog.Core.Hubs;
@@ -25,6 +26,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -62,16 +64,16 @@ namespace Blog.Core
         public IServiceProvider ConfigureServices(IServiceCollection services)
         {
             #region 部分服务注入-netcore自带方法
-            //缓存注入
+            // 缓存注入
             services.AddScoped<ICaching, MemoryCaching>();
             services.AddSingleton<IMemoryCache>(factory =>
             {
                 var cache = new MemoryCache(new MemoryCacheOptions());
                 return cache;
             });
-            //Redis注入
+            // Redis注入
             services.AddSingleton<IRedisCacheManager, RedisCacheManager>();
-            //log日志注入
+            // log日志注入
             services.AddSingleton<ILoggerHelper, LogHelper>();
             #endregion
 
@@ -103,8 +105,10 @@ namespace Blog.Core
                 //一般采用这种方法
                 c.AddPolicy("LimitRequests", policy =>
                 {
+                    // 支持多个域名端口，注意端口号后不要带/斜杆：比如localhost:8000/，是错的
+                    // 注意，http://127.0.0.1:1818 和 http://localhost:1818 是不一样的，尽量写两个
                     policy
-                    .WithOrigins("http://127.0.0.1:1818", "http://localhost:8080", "http://localhost:8021", "http://localhost:8081", "http://localhost:1818")//支持多个域名端口，注意端口号后不要带/斜杆：比如localhost:8000/，是错的
+                    .WithOrigins("http://127.0.0.1:1818", "http://localhost:8080", "http://localhost:8021", "http://localhost:8081", "http://localhost:1818")
                     .AllowAnyHeader()//Ensures that the policy allows any header.
                     .AllowAnyMethod();
                 });
@@ -190,7 +194,17 @@ namespace Blog.Core
             // 取消默认驼峰
             .AddJsonOptions(options => { options.SerializerSettings.ContractResolver = new DefaultContractResolver(); });
 
+
             #endregion
+
+            #region Httpcontext
+
+            // Httpcontext 注入
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddScoped<IUser, AspNetUser>();
+
+            #endregion
+
 
             services.AddSignalR();
 
@@ -252,14 +266,14 @@ namespace Blog.Core
                 audienceConfig["Issuer"],//发行人
                 audienceConfig["Audience"],//听众
                 signingCredentials,//签名凭据
-                expiration: TimeSpan.FromSeconds(60*5)//接口的过期时间
+                expiration: TimeSpan.FromSeconds(60*60)//接口的过期时间
                 );
             #endregion
 
             //【授权】
             services.AddAuthorization(options =>
             {
-                options.AddPolicy("Permission",
+                options.AddPolicy(PermissionNames.Permission,
                          policy => policy.Requirements.Add(permissionRequirement));
             });
 
@@ -454,7 +468,7 @@ namespace Blog.Core
             #region Authen
 
             //此授权认证方法已经放弃，请使用下边的官方验证方法。但是如果你还想传User的全局变量，还是可以继续使用中间件，第二种写法//app.UseMiddleware<JwtTokenAuth>(); 
-            //app.UserJwtTokenAuth(); 
+            //app.UseJwtTokenAuth(); 
 
             //如果你想使用官方认证，必须在上边ConfigureService 中，配置JWT的认证服务 (.AddAuthentication 和 .AddJwtBearer 二者缺一不可)
             app.UseAuthentication();
@@ -489,7 +503,7 @@ namespace Blog.Core
             {
                 //这里要说下，为啥地址要写 /api/xxx 
                 //因为我前后端分离了，而且使用的是代理模式，所以如果你不用/api/xxx的这个规则的话，会出现跨域问题，毕竟这个不是我的controller的路由，而且自己定义的路由
-                routes.MapHub<ChatHub>("/api/chatHub");
+                routes.MapHub<ChatHub>("/api2/chatHub");
             });
         }
 

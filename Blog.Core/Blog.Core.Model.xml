@@ -69,7 +69,11 @@
             创建时间
             </summary>
         </member>
-        <!-- Badly formed XML comment ignored for member "T:Blog.Core.Model.Models.BlogArticle" -->
+        <member name="T:Blog.Core.Model.Models.BlogArticle">
+            <summary>
+            博客文章
+            </summary>
+        </member>
         <member name="P:Blog.Core.Model.Models.BlogArticle.bID">
             <summary>
             主键
@@ -396,6 +400,11 @@
             是否是按钮
             </summary>
         </member>
+        <member name="P:Blog.Core.Model.Models.Permission.IsHide">
+            <summary>
+            是否是隐藏菜单
+            </summary>
+        </member>
         <member name="P:Blog.Core.Model.Models.Permission.Pid">
             <summary>
             上一级菜单（0表示上一级无菜单）
@@ -641,8 +650,16 @@
             登录账号
             </summary>
         </member>
-        <!-- Badly formed XML comment ignored for member "T:Blog.Core.Model.Models.Topic" -->
-        <!-- Badly formed XML comment ignored for member "T:Blog.Core.Model.Models.TopicDetail" -->
+        <member name="T:Blog.Core.Model.Models.Topic">
+            <summary>
+            Tibug 类别
+            </summary>
+        </member>
+        <member name="T:Blog.Core.Model.Models.TopicDetail">
+            <summary>
+            Tibug 博文
+            </summary>
+        </member>
         <member name="T:Blog.Core.Model.Models.UserRole">
             <summary>
             用户跟角色关联表
@@ -778,6 +795,7 @@
             <param name="strNameSpace">命名空间</param>
             <param name="lstTableNames">生产指定的表</param>
             <param name="strInterface">实现接口</param>
+            <param name="blnSerializable">是否序列化</param>
         </member>
         <member name="M:Blog.Core.Model.Models.MyContext.CreateTableByEntity``1(System.Boolean,``0[])">
             <summary>
@@ -800,8 +818,7 @@
             功能描述:获得一个DbContext
             作　　者:Blog.Core
             </summary>
-            <param name="blnIsAutoCloseConnection">是否自动关闭连接（如果为false，则使用接受时需要手动关闭Db）</param>
-            <returns>返回值</returns>
+            <returns></returns>
         </member>
         <member name="M:Blog.Core.Model.Models.MyContext.Init(System.String,SqlSugar.DbType)">
             <summary>
@@ -851,7 +868,7 @@
         </member>
         <member name="P:Blog.Core.Model.PageModel`1.page">
             <summary>
-            当前页数
+            当前页标
             </summary>
         </member>
         <member name="P:Blog.Core.Model.PageModel`1.pageCount">
@@ -862,6 +879,11 @@
         <member name="P:Blog.Core.Model.PageModel`1.dataCount">
             <summary>
             数据总数
+            </summary>
+        </member>
+        <member name="P:Blog.Core.Model.PageModel`1.PageSize">
+            <summary>
+            每页大小
             </summary>
         </member>
         <member name="P:Blog.Core.Model.PageModel`1.data">

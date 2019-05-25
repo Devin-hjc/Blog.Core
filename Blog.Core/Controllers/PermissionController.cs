@@ -2,15 +2,20 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Blog.Core.AuthHelper.OverWrite;
 using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
 {
+    /// <summary>
+    /// 菜单管理
+    /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
     [Authorize(PermissionNames.Permission)]
@@ -20,6 +25,7 @@ namespace Blog.Core.Controllers
         readonly IModuleServices _moduleServices;
         readonly IRoleModulePermissionServices _roleModulePermissionServices;
         readonly IUserRoleServices _userRoleServices;
+        readonly IHttpContextAccessor _httpContext;
 
         /// <summary>
         /// 构造函数
@@ -28,41 +34,58 @@ namespace Blog.Core.Controllers
         /// <param name="moduleServices"></param>
         /// <param name="roleModulePermissionServices"></param>
         /// <param name="userRoleServices"></param>
-        public PermissionController(IPermissionServices permissionServices, IModuleServices moduleServices, IRoleModulePermissionServices roleModulePermissionServices, IUserRoleServices userRoleServices)
+        /// <param name="httpContext"></param>
+        public PermissionController(IPermissionServices permissionServices, IModuleServices moduleServices, IRoleModulePermissionServices roleModulePermissionServices, IUserRoleServices userRoleServices, IHttpContextAccessor httpContext)
         {
             _permissionServices = permissionServices;
             _moduleServices = moduleServices;
             _roleModulePermissionServices = roleModulePermissionServices;
             _userRoleServices = userRoleServices;
+            _httpContext = httpContext;
 
         }
 
+        /// <summary>
+        /// 获取菜单
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         // GET: api/User
         [HttpGet]
         public async Task<MessageModel<PageModel<Permission>>> Get(int page = 1, string key = "")
         {
-            var data = new MessageModel<PageModel<Permission>>();
-            int intTotalCount = 50;
-            int totalCount = 0;
-            int pageCount = 1;
-
-            var permissions = await _permissionServices.Query(a => a.IsDeleted != true);
-
-            if (!string.IsNullOrEmpty(key))
+            PageModel<Permission> permissions = new PageModel<Permission>();
+            int intPageSize = 50;
+            if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
             {
-                permissions = permissions.Where(t => (t.Name != null && t.Name.Contains(key))).ToList();
+                key = "";
             }
 
+            #region 舍弃
+            //var permissions = await _permissionServices.Query(a => a.IsDeleted != true);
+            //if (!string.IsNullOrEmpty(key))
+            //{
+            //    permissions = permissions.Where(t => (t.Name != null && t.Name.Contains(key))).ToList();
+            //}
+            ////筛选后的数据总数
+            //totalCount = permissions.Count;
+            ////筛选后的总页数
+            //pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
+            //permissions = permissions.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList(); 
+            #endregion
 
-            //筛选后的数据总数
-            totalCount = permissions.Count;
-            //筛选后的总页数
-            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
 
-            permissions = permissions.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
+
+            permissions = await _permissionServices.QueryPage(a => a.IsDeleted != true && (a.Name != null && a.Name.Contains(key)), page, intPageSize, " Id desc ");
+
+
+            #region 单独处理
+
             var apis = await _moduleServices.Query(d => d.IsDeleted == false);
+            var permissionsView = permissions.data;
 
-            foreach (var item in permissions)
+            foreach (var item in permissionsView)
             {
                 List<int> pidarr = new List<int>();
                 pidarr.Add(item.Pid);
@@ -70,19 +93,19 @@ namespace Blog.Core.Controllers
                 {
                     pidarr.Add(0);
                 }
-                var parent = permissions.FirstOrDefault(d => d.Id == item.Pid);
+                var parent = permissionsView.FirstOrDefault(d => d.Id == item.Pid);
 
                 while (parent != null)
                 {
                     pidarr.Add(parent.Id);
-                    parent = permissions.FirstOrDefault(d => d.Id == parent.Pid);
+                    parent = permissionsView.FirstOrDefault(d => d.Id == parent.Pid);
                 }
 
 
                 item.PidArr = pidarr.OrderBy(d => d).Distinct().ToList();
                 foreach (var pid in item.PidArr)
                 {
-                    var per = permissions.FirstOrDefault(d => d.Id == pid);
+                    var per = permissionsView.FirstOrDefault(d => d.Id == pid);
                     item.PnameArr.Add((per != null ? per.Name : "根节点") + "/");
                     //var par = Permissions.Where(d => d.Pid == item.Id ).ToList();
                     //item.PCodeArr.Add((per != null ? $"/{per.Code}/{item.Code}" : ""));
@@ -95,17 +118,16 @@ namespace Blog.Core.Controllers
                 item.MName = apis.FirstOrDefault(d => d.Id == item.Mid)?.LinkUrl;
             }
 
+            permissions.data = permissionsView;
+
+            #endregion
+
+
             return new MessageModel<PageModel<Permission>>()
             {
                 msg = "获取成功",
-                success = totalCount >= 0,
-                response = new PageModel<Permission>()
-                {
-                    page = page,
-                    pageCount = pageCount,
-                    dataCount = totalCount,
-                    data = permissions,
-                }
+                success = permissions.dataCount >= 0,
+                response = permissions
             };
 
         }
@@ -117,6 +139,11 @@ namespace Blog.Core.Controllers
             return "value";
         }
 
+        /// <summary>
+        /// 添加一个菜单
+        /// </summary>
+        /// <param name="permission"></param>
+        /// <returns></returns>
         // POST: api/User
         [HttpPost]
         public async Task<MessageModel<string>> Post([FromBody] Permission permission)
@@ -134,7 +161,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
-
+        /// <summary>
+        /// 保存菜单权限分配
+        /// </summary>
+        /// <param name="assignView"></param>
+        /// <returns></returns>
         [HttpPost]
         public async Task<MessageModel<string>> Assign([FromBody] AssignView assignView)
         {
@@ -187,6 +218,13 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+
+        /// <summary>
+        /// 获取菜单树
+        /// </summary>
+        /// <param name="pid"></param>
+        /// <param name="needbtn"></param>
+        /// <returns></returns>
         [HttpGet]
         public async Task<MessageModel<PermissionTree>> GetPermissionTree(int pid = 0, bool needbtn = false)
         {
@@ -224,14 +262,25 @@ namespace Blog.Core.Controllers
             return data;
         }
 
-
+        /// <summary>
+        /// 获取路由树
+        /// </summary>
+        /// <param name="uid"></param>
+        /// <returns></returns>
         [HttpGet]
-        [AllowAnonymous]
         public async Task<MessageModel<NavigationBar>> GetNavigationBar(int uid)
         {
+
             var data = new MessageModel<NavigationBar>();
 
-            if (uid > 0)
+            // 两种方式获取 uid
+            var uidInHttpcontext1 = (from item in _httpContext.HttpContext.User.Claims
+                                    where item.Type == "jti"
+                                    select item.Value).FirstOrDefault().ObjToInt();
+
+            var uidInHttpcontext = (JwtHelper.SerializeJwt(_httpContext.HttpContext.Request.Headers["Authorization"].ObjToString().Replace("Bearer ", "")))?.Uid;
+
+            if (uid > 0 && uid == uidInHttpcontext)
             {
                 var roleId = ((await _userRoleServices.Query(d => d.IsDeleted == false && d.UserId == uid)).FirstOrDefault()?.RoleId).ObjToInt();
                 if (roleId > 0)
@@ -252,10 +301,12 @@ namespace Blog.Core.Controllers
                                                    order = child.OrderSort,
                                                    path = child.Code,
                                                    iconCls = child.Icon,
+                                                   IsHide = child.IsHide.ObjToBool(),
                                                    meta = new NavigationBarMeta
                                                    {
                                                        requireAuth = true,
                                                        title = child.Name,
+                                                       NoTabPage = child.IsHide.ObjToBool()
                                                    }
                                                }).ToList();
 
@@ -288,7 +339,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
-
+        /// <summary>
+        /// 通过角色获取菜单
+        /// </summary>
+        /// <param name="rid"></param>
+        /// <returns></returns>
         [HttpGet]
         [AllowAnonymous]
         public async Task<MessageModel<AssignShow>> GetPermissionIdByRoleId(int rid = 0)
@@ -326,7 +381,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
-
+        /// <summary>
+        /// 更新菜单
+        /// </summary>
+        /// <param name="permission"></param>
+        /// <returns></returns>
         // PUT: api/User/5
         [HttpPut]
         public async Task<MessageModel<string>> Put([FromBody] Permission permission)
@@ -345,6 +404,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 删除菜单
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // DELETE: api/ApiWithActions/5
         [HttpDelete]
         public async Task<MessageModel<string>> Delete(int id)

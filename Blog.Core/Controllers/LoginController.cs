@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Blog.Core.AuthHelper;
 using Blog.Core.AuthHelper.OverWrite;
+using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Cors;
@@ -15,7 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Blog.Core.Controllers
 {
     /// <summary>
-    /// 
+    /// 登录管理
     /// </summary>
     [Produces("application/json")]
     [Route("api/Login")]
@@ -45,10 +46,10 @@ namespace Blog.Core.Controllers
 
         #region 获取token的第1种方法
         /// <summary>
-        /// 获取JWT的方法
+        /// 获取JWT的方法1
         /// </summary>
-        /// <param name="id">id</param>
-        /// <param name="sub">角色</param>
+        /// <param name="name"></param>
+        /// <param name="pass"></param>
         /// <returns></returns>
         [HttpGet]
         [Route("Token")]
@@ -57,13 +58,12 @@ namespace Blog.Core.Controllers
             string jwtStr = string.Empty;
             bool suc = false;
             //这里就是用户登陆以后，通过数据库去调取数据，分配权限的操作
-            //这里直接写死了
 
-            var user = await _sysUserInfoServices.GetUserRoleNameStr(name, pass);
+            var user = await _sysUserInfoServices.GetUserRoleNameStr(name, MD5Helper.MD5Encrypt32(pass));
             if (user != null)
             {
 
-                TokenModelJwt tokenModel = new TokenModelJwt {Uid = 1, Role = user};
+                TokenModelJwt tokenModel = new TokenModelJwt { Uid = 1, Role = user };
 
                 jwtStr = JwtHelper.IssueJwt(tokenModel);
                 suc = true;
@@ -81,10 +81,15 @@ namespace Blog.Core.Controllers
         }
 
 
-
+        /// <summary>
+        /// 获取JWT的方法2：给Nuxt提供
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="pass"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("GetTokenNuxt")]
-        public async Task<object> GetJwtStrForNuxt(string name, string pass)
+        public object GetJwtStrForNuxt(string name, string pass)
         {
             string jwtStr = string.Empty;
             bool suc = false;
@@ -119,7 +124,7 @@ namespace Blog.Core.Controllers
 
 
         /// <summary>
-        /// 获取JWT的方法 3.0
+        /// 获取JWT的方法3：整个系统主要方法
         /// </summary>
         /// <param name="name"></param>
         /// <param name="pass"></param>
@@ -129,7 +134,6 @@ namespace Blog.Core.Controllers
         public async Task<object> GetJwtToken3(string name = "", string pass = "")
         {
             string jwtStr = string.Empty;
-            bool suc = false;
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(pass))
             {
@@ -139,6 +143,8 @@ namespace Blog.Core.Controllers
                     message = "用户名或密码不能为空"
                 });
             }
+
+            pass = MD5Helper.MD5Encrypt32(pass);
 
             var user = await _sysUserInfoServices.Query(d => d.uLoginName == name && d.uLoginPWD == pass);
             if (user.Count > 0)
@@ -171,13 +177,16 @@ namespace Blog.Core.Controllers
 
         }
 
-
+        /// <summary>
+        /// 请求刷新Token（以旧换新）
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("RefreshToken")]
         public async Task<object> RefreshToken(string token = "")
         {
             string jwtStr = string.Empty;
-            bool suc = false;
 
             if (string.IsNullOrEmpty(token))
             {
@@ -218,8 +227,9 @@ namespace Blog.Core.Controllers
         }
 
         /// <summary>
-        /// 
+        /// 获取JWT的方法4：给 JSONP 测试
         /// </summary>
+        /// <param name="callBack"></param>
         /// <param name="id"></param>
         /// <param name="sub"></param>
         /// <param name="expiresSliding"></param>

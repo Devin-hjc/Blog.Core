@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
 {
+    /// <summary>
+    /// Tibug 管理
+    /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
     [Authorize(PermissionNames.Permission)]
@@ -19,7 +22,7 @@ namespace Blog.Core.Controllers
         readonly ITopicDetailServices _topicDetailServices;
 
         /// <summary>
-        /// TopicDetailController
+        /// 构造函数
         /// </summary>
         /// <param name="topicServices"></param>
         /// <param name="topicDetailServices"></param>
@@ -34,55 +37,44 @@ namespace Blog.Core.Controllers
         /// </summary>
         /// <param name="page">页数</param>
         /// <param name="tname">专题类型</param>
+        /// <param name="key">关键字</param>
         /// <returns></returns>
         [HttpGet]
         [AllowAnonymous]
         public async Task<MessageModel<PageModel<TopicDetail>>> Get(int page = 1, string tname = "", string key = "")
         {
-            var data = new MessageModel<PageModel<TopicDetail>>();
-            int intTotalCount = 6;
-            int totalCount = 0;
-            int pageCount = 1;
 
-            //总数据，使用AOP切面缓存
-            //topicDetails = await _topicDetailServices.GetTopicDetails();
-            var topicDetails = await _topicDetailServices.Query(a => !a.tdIsDelete && a.tdSectendDetail == "tbug");
-
-            if (!string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
             {
-                topicDetails = topicDetails.Where(t => (t.tdName != null && t.tdName.Contains(key)) || (t.tdDetail != null && t.tdDetail.Contains(key))).ToList();
+                key = "";
             }
-
+            if (string.IsNullOrEmpty(tname) || string.IsNullOrWhiteSpace(tname))
+            {
+                tname = "";
+            }
             tname = UnicodeHelper.UnicodeToString(tname);
 
-            if (!string.IsNullOrEmpty(tname))
-            {
-                var tid = (await _topicServices.Query(ts => ts.tName == tname)).FirstOrDefault()?.Id.ObjToInt();
-                topicDetails = topicDetails.Where(t => t.TopicId == tid).ToList();
-            }
+            int intPageSize = 6;
 
-            //筛选后的数据总数
-            totalCount = topicDetails.Count;
-            //筛选后的总页数
-            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
+            
+            var data = await _topicDetailServices.QueryPage(a => !a.tdIsDelete && a.tdSectendDetail == "tbug" && ((a.tdName != null && a.tdName.Contains(key)) || (a.tdDetail != null && a.tdDetail.Contains(key))), page, intPageSize, " Id desc ");
 
-            topicDetails = topicDetails.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
+
 
             return new MessageModel<PageModel<TopicDetail>>()
             {
                 msg = "获取成功",
-                success = totalCount >= 0,
-                response = new PageModel<TopicDetail>()
-                {
-                    page = page,
-                    pageCount = pageCount,
-                    dataCount = totalCount,
-                    data = topicDetails,
-                }
+                success = data.dataCount >= 0,
+                response = data
             };
 
         }
 
+        /// <summary>
+        /// 获取详情【无权限】
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // GET: api/TopicDetail/5
         [HttpGet("{id}")]
         [AllowAnonymous]
@@ -100,6 +92,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 添加一个 BUG 【无权限】
+        /// </summary>
+        /// <param name="topicDetail"></param>
+        /// <returns></returns>
         // POST: api/TopicDetail
         [HttpPost]
         [AllowAnonymous]
@@ -124,6 +121,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 更新 bug
+        /// </summary>
+        /// <param name="topicDetail"></param>
+        /// <returns></returns>
         // PUT: api/TopicDetail/5
         [HttpPut]
         public async Task<MessageModel<string>> Update([FromBody] TopicDetail topicDetail)
@@ -142,6 +144,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 删除 bug
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // DELETE: api/ApiWithActions/5
         [HttpDelete]
         public async Task<MessageModel<string>> Delete(int id)

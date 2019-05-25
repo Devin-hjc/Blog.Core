@@ -16,7 +16,7 @@ using static Blog.Core.SwaggerHelper.CustomApiVersion;
 namespace Blog.Core.Controllers
 {
     /// <summary>
-    /// Blog控制器所有接口
+    /// 博客管理
     /// </summary>
     [Produces("application/json")]
     [Route("api/Blog")]
@@ -43,15 +43,20 @@ namespace Blog.Core.Controllers
         /// <param name="id"></param>
         /// <param name="page"></param>
         /// <param name="bcategory"></param>
+        /// <param name="key"></param>
         /// <returns></returns>
         [HttpGet]
         [AllowAnonymous]
-        public async Task<object> Get(int id, int page = 1, string bcategory = "技术博文")
+        public async Task<object> Get(int id, int page = 1, string bcategory = "技术博文", string key = "")
         {
             int intTotalCount = 6;
             int total;
             int totalCount = 1;
             List<BlogArticle> blogArticleList = new List<BlogArticle>();
+            if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
+            {
+                key = "";
+            }
 
             using (MiniProfiler.Current.Step("开始加载数据："))
             {
@@ -76,6 +81,8 @@ namespace Blog.Core.Controllers
                     blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory && a.IsDeleted == false);
                 }
             }
+
+            blogArticleList = blogArticleList.Where(d => (d.btitle != null && d.btitle.Contains(key)) || (d.bcontent != null && d.bcontent.Contains(key))).ToList();
 
             total = blogArticleList.Count();
             totalCount = blogArticleList.Count() / intTotalCount;
@@ -109,9 +116,8 @@ namespace Blog.Core.Controllers
         }
 
 
-        // GET: api/Blog/5
         /// <summary>
-        /// 获取详情
+        /// 获取博客详情
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
@@ -129,7 +135,11 @@ namespace Blog.Core.Controllers
         }
 
 
-
+        /// <summary>
+        /// 获取详情【无权限】
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpGet]
         [Route("DetailNuxtNoPer")]
         public async Task<object> DetailNuxtNoPer(int id)
@@ -152,23 +162,27 @@ namespace Blog.Core.Controllers
         //[ApiExplorerSettings(GroupName = "v2")]
         ////路径 如果以 / 开头，表示绝对路径，反之相对 controller 的想u地路径
         //[Route("/api/v2/blog/Blogtest")]
-
         //和上边的版本控制以及路由地址都是一样的
+
         [CustomRoute(ApiVersions.V2, "Blogtest")]
-        public async Task<object> V2_Blogtest()
+        public object V2_Blogtest()
         {
             return Ok(new { status = 220, data = "我是第二版的博客信息" });
         }
 
-
+        /// <summary>
+        /// 添加博客【无权限】
+        /// </summary>
+        /// <param name="blogArticle"></param>
+        /// <returns></returns>
         [HttpPost]
-        [AllowAnonymous]
         public async Task<MessageModel<string>> Post([FromBody] BlogArticle blogArticle)
         {
             var data = new MessageModel<string>();
 
             blogArticle.bCreateTime = DateTime.Now;
             blogArticle.bUpdateTime = DateTime.Now;
+            blogArticle.IsDeleted = false;
 
             var id = (await _blogArticleServices.Add(blogArticle));
             data.success = id > 0;
@@ -181,6 +195,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 删除博客
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         [HttpDelete]
         [Authorize(PermissionNames.Permission)]
         [Route("Delete")]

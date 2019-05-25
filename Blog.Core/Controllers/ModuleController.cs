@@ -10,6 +10,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Blog.Core.Controllers
 {
+    /// <summary>
+    /// 接口管理
+    /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
     [Authorize(PermissionNames.Permission)]
@@ -26,42 +29,29 @@ namespace Blog.Core.Controllers
             _moduleServices = moduleServices;
         }
 
+        /// <summary>
+        /// 获取全部接口api
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
         // GET: api/User
         [HttpGet]
         public async Task<MessageModel<PageModel<Module>>> Get(int page = 1, string key = "")
         {
-            var data = new MessageModel<PageModel<Module>>();
-            int intTotalCount = 50;
-            int totalCount = 0;
-            int pageCount = 1;
-            List<Module> modules = new List<Module>();
-
-            modules = await _moduleServices.Query(a => a.IsDeleted != true );
-
-            if (!string.IsNullOrEmpty(key))
+            if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
             {
-                modules = modules.Where(t => (t.Name != null && t.Name.Contains(key))).ToList();
+                key = "";
             }
+            int intPageSize = 50;
 
-
-            //筛选后的数据总数
-            totalCount = modules.Count;
-            //筛选后的总页数
-            pageCount = (Math.Ceiling(totalCount.ObjToDecimal() / intTotalCount.ObjToDecimal())).ObjToInt();
-
-            modules = modules.OrderByDescending(d => d.Id).Skip((page - 1) * intTotalCount).Take(intTotalCount).ToList();
+            var data = await _moduleServices.QueryPage(a => a.IsDeleted != true && (a.Name != null && a.Name.Contains(key)), page, intPageSize, " Id desc ");
 
             return new MessageModel<PageModel<Module>>()
             {
                 msg = "获取成功",
-                success = totalCount >= 0,
-                response = new PageModel<Module>()
-                {
-                    page = page,
-                    pageCount = pageCount,
-                    dataCount = totalCount,
-                    data = modules,
-                }
+                success = data.dataCount >= 0,
+                response = data
             };
 
         }
@@ -73,6 +63,11 @@ namespace Blog.Core.Controllers
             return "value";
         }
 
+        /// <summary>
+        /// 添加一条接口信息
+        /// </summary>
+        /// <param name="module"></param>
+        /// <returns></returns>
         // POST: api/User
         [HttpPost]
         public async Task<MessageModel<string>> Post([FromBody] Module module)
@@ -90,6 +85,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 更新接口信息
+        /// </summary>
+        /// <param name="module"></param>
+        /// <returns></returns>
         // PUT: api/User/5
         [HttpPut]
         public async Task<MessageModel<string>> Put([FromBody] Module module)
@@ -108,6 +108,11 @@ namespace Blog.Core.Controllers
             return data;
         }
 
+        /// <summary>
+        /// 删除一条接口
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         // DELETE: api/ApiWithActions/5
         [HttpDelete]
         public async Task<MessageModel<string>> Delete(int id)
