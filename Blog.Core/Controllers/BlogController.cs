@@ -20,6 +20,7 @@ namespace Blog.Core.Controllers
     /// </summary>
     [Produces("application/json")]
     [Route("api/Blog")]
+    [Authorize]
     public class BlogController : Controller
     {
         readonly IBlogArticleServices _blogArticleServices;
@@ -38,7 +39,7 @@ namespace Blog.Core.Controllers
 
 
         /// <summary>
-        /// 获取博客列表
+        /// 获取博客列表【无权限】
         /// </summary>
         /// <param name="id"></param>
         /// <param name="page"></param>
@@ -47,6 +48,8 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         [HttpGet]
         [AllowAnonymous]
+        //[ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+        [ResponseCache(Duration = 600)]
         public async Task<object> Get(int id, int page = 1, string bcategory = "技术博文", string key = "")
         {
             int intTotalCount = 6;
@@ -70,7 +73,7 @@ namespace Blog.Core.Controllers
                     else
                     {
                         MiniProfiler.Current.Step("从MSSQL服务器中加载数据：");
-                        blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory && a.IsDeleted != false);
+                        blogArticleList = await _blogArticleServices.Query(a => a.bcategory == bcategory && a.IsDeleted == false);
                         _redisCacheManager.Set("Redis.Blog", blogArticleList, TimeSpan.FromHours(2));
                     }
 
@@ -108,8 +111,8 @@ namespace Blog.Core.Controllers
             return Ok(new
             {
                 success = true,
-                page = page,
-                total = total,
+                page,
+                total,
                 pageCount = totalCount,
                 data = blogArticleList
             });
@@ -123,7 +126,6 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         [HttpGet("{id}")]
         [Authorize(Roles = "Admin")]
-        //[Authorize(PermissionNames.Permission)]
         public async Task<object> Get(int id)
         {
             var model = await _blogArticleServices.GetBlogDetails(id);
@@ -142,6 +144,7 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("DetailNuxtNoPer")]
+        [AllowAnonymous]
         public async Task<object> DetailNuxtNoPer(int id)
         {
             var model = await _blogArticleServices.GetBlogDetails(id);
@@ -165,6 +168,7 @@ namespace Blog.Core.Controllers
         //和上边的版本控制以及路由地址都是一样的
 
         [CustomRoute(ApiVersions.V2, "Blogtest")]
+        [AllowAnonymous]
         public object V2_Blogtest()
         {
             return Ok(new { status = 220, data = "我是第二版的博客信息" });
@@ -176,6 +180,7 @@ namespace Blog.Core.Controllers
         /// <param name="blogArticle"></param>
         /// <returns></returns>
         [HttpPost]
+        [AllowAnonymous]
         public async Task<MessageModel<string>> Post([FromBody] BlogArticle blogArticle)
         {
             var data = new MessageModel<string>();
@@ -201,7 +206,7 @@ namespace Blog.Core.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpDelete]
-        [Authorize(PermissionNames.Permission)]
+        [Authorize(Permissions.Name)]
         [Route("Delete")]
         public async Task<MessageModel<string>> Delete(int id)
         {

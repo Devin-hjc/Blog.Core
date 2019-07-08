@@ -18,7 +18,9 @@ using Blog.Core.Common.MemoryCache;
 using Blog.Core.Filter;
 using Blog.Core.Hubs;
 using Blog.Core.Log;
+using Blog.Core.Middlewares;
 using Blog.Core.Model;
+using Blog.Core.Tasks;
 using log4net;
 using log4net.Config;
 using log4net.Repository;
@@ -45,15 +47,15 @@ namespace Blog.Core
         /// <summary>
         /// log4net 仓储库
         /// </summary>
-        public static ILoggerRepository repository { get; set; }
+        public static ILoggerRepository Repository { get; set; }
 
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
             //log4net
-            repository = LogManager.CreateRepository(Configuration["Logging:Log4Net:Name"]);
+            Repository = LogManager.CreateRepository(Configuration["Logging:Log4Net:Name"]);
             //指定配置文件，如果这里你遇到问题，应该是使用了InProcess模式，请查看Blog.Core.csproj,并删之
-            XmlConfigurator.Configure(repository, new FileInfo("log4net.config"));
+            XmlConfigurator.Configure(Repository, new FileInfo("log4net.config"));
 
         }
 
@@ -189,11 +191,22 @@ namespace Blog.Core
             {
                 // 全局异常过滤
                 o.Filters.Add(typeof(GlobalExceptionsFilter));
+                // 全局路由权限公约
+                o.Conventions.Insert(0, new GlobalRouteAuthorizeConvention());
+                // 全局路由前缀，统一修改路由
+                o.Conventions.Insert(0, new GlobalRoutePrefixFilter(new RouteAttribute(RoutePrefix.Name)));
             })
             .SetCompatibilityVersion(CompatibilityVersion.Version_2_2)
             // 取消默认驼峰
             .AddJsonOptions(options => { options.SerializerSettings.ContractResolver = new DefaultContractResolver(); });
 
+
+            #endregion
+
+            #region TimedJob
+
+            services.AddHostedService<Job1TimedService>();
+            services.AddHostedService<Job2TimedService>();
 
             #endregion
 
@@ -205,24 +218,27 @@ namespace Blog.Core
 
             #endregion
 
-
+            #region SignalR 通讯
             services.AddSignalR();
+            #endregion
 
-            #region Authorize权限设置三种情况
+            #region Authorize 权限认证三步走
 
             //使用说明：
-            //如果你只是简单的基于角色授权的，第一步：【1/2 简单角色授权】，第二步：配置【统一认证】，第三步：开启中间件app.UseMiddleware<JwtTokenAuth>()不能验证过期，或者 app.UseAuthentication();可以验证过期时间
-            //如果你是用的复杂的策略授权，配置权限在数据库，第一步：【3复杂策略授权】，第二步：配置【统一认证】，第三步：开启中间件app.UseAuthentication();
-            //综上所述，设置权限，必须要三步走，涉及授权策略 + 配置认证 + 开启授权中间件，只不过自定义的中间件不能验证过期时间，所以我都是用官方的。
 
-            #region 【1/2、简单角色授权】
+            //1、如果你只是简单的基于角色授权的，仅仅在 api 上配置，第一步：【1/2 简单角色授权】，第二步：配置【统一认证服务】，第三步：开启中间件
+
+            //2、如果你是用的复杂的基于策略授权，配置权限在数据库，第一步：【3复杂策略授权】，第二步：配置【统一认证服务】，第三步：开启中间件app.UseAuthentication();
+
+            //3、综上所述，设置权限，必须要三步走，授权 + 配置认证服务 + 开启授权中间件，只不过自定义的中间件不能验证过期时间，所以我都是用官方的。
+
+            #region 【第一步：授权】
+
             #region 1、基于角色的API授权 
 
-            // 1【授权】、这个很简单，其他什么都不用做，
-            // 无需配置服务，只需要在API层的controller上边，增加特性即可，注意，只能是角色的:
-            // [Authorize(Roles = "Admin")]
+            // 1【授权】、这个很简单，其他什么都不用做， 只需要在API层的controller上边，增加特性即可，注意，只能是角色的:
+            // [Authorize(Roles = "Admin,System")]
 
-            // 2【认证】、然后在下边的configure里，配置中间件即可:app.UseMiddleware<JwtTokenAuth>();但是这个方法，无法验证过期时间，所以如果需要验证过期时间，还是需要下边的第三种方法，官方认证
 
             #endregion
 
@@ -238,10 +254,7 @@ namespace Blog.Core
             });
 
 
-            // 2【认证】、然后在下边的configure里，配置中间件即可:app.UseMiddleware<JwtTokenAuth>();但是这个方法，无法验证过期时间，所以如果需要验证过期时间，还是需要下边的第三种方法，官方认证
-            #endregion 
             #endregion
-
 
             #region 【3、复杂策略授权】
 
@@ -266,14 +279,14 @@ namespace Blog.Core
                 audienceConfig["Issuer"],//发行人
                 audienceConfig["Audience"],//听众
                 signingCredentials,//签名凭据
-                expiration: TimeSpan.FromSeconds(60*60)//接口的过期时间
+                expiration: TimeSpan.FromSeconds(60 * 60)//接口的过期时间
                 );
             #endregion
 
             //【授权】
             services.AddAuthorization(options =>
             {
-                options.AddPolicy(PermissionNames.Permission,
+                options.AddPolicy(Permissions.Name,
                          policy => policy.Requirements.Add(permissionRequirement));
             });
 
@@ -281,7 +294,13 @@ namespace Blog.Core
             #endregion
 
 
-            #region 【统一认证】
+            #endregion
+
+
+
+
+
+            #region 【第二步：配置认证服务】
             // 令牌验证参数
             var tokenValidationParameters = new TokenValidationParameters
             {
@@ -429,11 +448,21 @@ namespace Blog.Core
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            #region ReuestResponseLog
+
+            if (Appsettings.app("AppSettings", "Middleware_RequestResponse", "Enabled").ObjToBool())
+            {
+                app.UseReuestResponseLog();//记录请求与返回数据 
+            }
+
+            #endregion
+
             #region Environment
             if (env.IsDevelopment())
             {
                 // 在开发环境中，使用异常页面，这样可以暴露错误堆栈信息，所以不要放在生产环境。
                 app.UseDeveloperExceptionPage();
+
             }
             else
             {
@@ -444,7 +473,6 @@ namespace Blog.Core
 
             }
             #endregion
-
 
             #region Swagger
             app.UseSwagger();
@@ -465,10 +493,10 @@ namespace Blog.Core
             app.UseMiniProfiler();
             #endregion
 
-            #region Authen
+            #region 第三步：开启认证中间件
 
             //此授权认证方法已经放弃，请使用下边的官方验证方法。但是如果你还想传User的全局变量，还是可以继续使用中间件，第二种写法//app.UseMiddleware<JwtTokenAuth>(); 
-            //app.UseJwtTokenAuth(); 
+            app.UseJwtTokenAuth(); 
 
             //如果你想使用官方认证，必须在上边ConfigureService 中，配置JWT的认证服务 (.AddAuthentication 和 .AddJwtBearer 二者缺一不可)
             app.UseAuthentication();
@@ -487,14 +515,17 @@ namespace Blog.Core
 
             #endregion
 
+
             // 跳转https
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             // 使用静态文件
             app.UseStaticFiles();
             // 使用cookie
             app.UseCookiePolicy();
             // 返回错误码
             app.UseStatusCodePages();//把错误码返回前台，比如是404
+
+
 
             app.UseMvc();
 

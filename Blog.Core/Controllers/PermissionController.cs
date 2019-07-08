@@ -18,7 +18,6 @@ namespace Blog.Core.Controllers
     /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [Authorize(PermissionNames.Permission)]
     public class PermissionController : ControllerBase
     {
         readonly IPermissionServices _permissionServices;
@@ -85,27 +84,30 @@ namespace Blog.Core.Controllers
             var apis = await _moduleServices.Query(d => d.IsDeleted == false);
             var permissionsView = permissions.data;
 
+            var permissionAll = await _permissionServices.Query(d => d.IsDeleted != true);
             foreach (var item in permissionsView)
             {
-                List<int> pidarr = new List<int>();
-                pidarr.Add(item.Pid);
+                List<int> pidarr = new List<int>
+                {
+                    item.Pid
+                };
                 if (item.Pid > 0)
                 {
                     pidarr.Add(0);
                 }
-                var parent = permissionsView.FirstOrDefault(d => d.Id == item.Pid);
+                var parent = permissionAll.FirstOrDefault(d => d.Id == item.Pid);
 
                 while (parent != null)
                 {
                     pidarr.Add(parent.Id);
-                    parent = permissionsView.FirstOrDefault(d => d.Id == parent.Pid);
+                    parent = permissionAll.FirstOrDefault(d => d.Id == parent.Pid);
                 }
 
 
                 item.PidArr = pidarr.OrderBy(d => d).Distinct().ToList();
                 foreach (var pid in item.PidArr)
                 {
-                    var per = permissionsView.FirstOrDefault(d => d.Id == pid);
+                    var per = permissionAll.FirstOrDefault(d => d.Id == pid);
                     item.PnameArr.Add((per != null ? per.Name : "根节点") + "/");
                     //var par = Permissions.Where(d => d.Pid == item.Id ).ToList();
                     //item.PCodeArr.Add((per != null ? $"/{per.Code}/{item.Code}" : ""));
@@ -242,10 +244,12 @@ namespace Blog.Core.Controllers
                                        isbtn = child.IsButton,
                                        order = child.OrderSort,
                                    }).ToList();
-            PermissionTree rootRoot = new PermissionTree();
-            rootRoot.value = 0;
-            rootRoot.Pid = 0;
-            rootRoot.label = "根节点";
+            PermissionTree rootRoot = new PermissionTree
+            {
+                value = 0,
+                Pid = 0,
+                label = "根节点"
+            };
 
             permissionTrees = permissionTrees.OrderBy(d => d.order).ToList();
 
@@ -340,7 +344,7 @@ namespace Blog.Core.Controllers
         }
 
         /// <summary>
-        /// 通过角色获取菜单
+        /// 通过角色获取菜单【无权限】
         /// </summary>
         /// <param name="rid"></param>
         /// <returns></returns>

@@ -9,6 +9,7 @@ using Blog.Core.AuthHelper.OverWrite;
 using Blog.Core.Common.Helper;
 using Blog.Core.IServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,15 +17,16 @@ using Microsoft.AspNetCore.Mvc;
 namespace Blog.Core.Controllers
 {
     /// <summary>
-    /// 登录管理
+    /// 登录管理【无权限】
     /// </summary>
     [Produces("application/json")]
     [Route("api/Login")]
+    [AllowAnonymous]
     public class LoginController : Controller
     {
         readonly ISysUserInfoServices _sysUserInfoServices;
-        IUserRoleServices _userRoleServices;
-        IRoleServices _roleServices;
+        readonly IUserRoleServices _userRoleServices;
+        readonly IRoleServices _roleServices;
         readonly PermissionRequirement _requirement;
 
 
@@ -97,9 +99,11 @@ namespace Blog.Core.Controllers
             //这里直接写死了
             if (name == "admins" && pass == "admins")
             {
-                TokenModelJwt tokenModel = new TokenModelJwt();
-                tokenModel.Uid = 1;
-                tokenModel.Role = "Admin";
+                TokenModelJwt tokenModel = new TokenModelJwt
+                {
+                    Uid = 1,
+                    Role = "Admin"
+                };
 
                 jwtStr = JwtHelper.IssueJwt(tokenModel);
                 suc = true;
@@ -239,15 +243,30 @@ namespace Blog.Core.Controllers
         [Route("jsonp")]
         public void Getjsonp(string callBack, long id = 1, string sub = "Admin", int expiresSliding = 30, int expiresAbsoulute = 30)
         {
-            TokenModelJwt tokenModel = new TokenModelJwt();
-            tokenModel.Uid = id;
-            tokenModel.Role = sub;
+            TokenModelJwt tokenModel = new TokenModelJwt
+            {
+                Uid = id,
+                Role = sub
+            };
 
             string jwtStr = JwtHelper.IssueJwt(tokenModel);
 
             string response = string.Format("\"value\":\"{0}\"", jwtStr);
             string call = callBack + "({" + response + "})";
             Response.WriteAsync(call);
+        }
+
+
+        /// <summary>
+        /// 测试 MD5 加密字符串
+        /// </summary>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("Md5Password")]
+        public string Md5Password(string password = "")
+        {
+            return MD5Helper.MD5Encrypt32(password);
         }
     }
 }

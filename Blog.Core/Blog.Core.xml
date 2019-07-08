@@ -25,6 +25,26 @@
             面向切面的缓存使用
             </summary>
         </member>
+        <member name="M:Blog.Core.AOP.CacheAOPbase.Intercept(Castle.DynamicProxy.IInvocation)">
+            <summary>
+            AOP的拦截方法
+            </summary>
+            <param name="invocation"></param>
+        </member>
+        <member name="M:Blog.Core.AOP.CacheAOPbase.CustomCacheKey(Castle.DynamicProxy.IInvocation)">
+            <summary>
+            自定义缓存的key
+            </summary>
+            <param name="invocation"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Blog.Core.AOP.CacheAOPbase.GetArgumentValue(System.Object)">
+            <summary>
+            object 转 string
+            </summary>
+            <param name="arg"></param>
+            <returns></returns>
+        </member>
         <member name="M:Blog.Core.AuthHelper.OverWrite.JwtHelper.IssueJwt(Blog.Core.AuthHelper.OverWrite.TokenModelJwt)">
             <summary>
             颁发JWT字符串
@@ -61,7 +81,9 @@
         </member>
         <member name="T:Blog.Core.AuthHelper.JwtTokenAuth">
             <summary>
-            
+            中间件
+            原做为自定义授权中间件
+            先做检查 header token的使用
             </summary>
         </member>
         <member name="F:Blog.Core.AuthHelper.JwtTokenAuth._next">
@@ -105,7 +127,7 @@
             验证方案提供对象
             </summary>
         </member>
-        <member name="P:Blog.Core.AuthHelper.PermissionHandler.roleModulePermissionServices">
+        <member name="P:Blog.Core.AuthHelper.PermissionHandler.RoleModulePermissionServices">
             <summary>
             services 层注入
             </summary>
@@ -212,7 +234,7 @@
         </member>
         <member name="M:Blog.Core.Controllers.BlogController.Get(System.Int32,System.Int32,System.String,System.String)">
             <summary>
-            获取博客列表
+            获取博客列表【无权限】
             </summary>
             <param name="id"></param>
             <param name="page"></param>
@@ -288,7 +310,7 @@
         </member>
         <member name="T:Blog.Core.Controllers.LoginController">
             <summary>
-            登录管理
+            登录管理【无权限】
             </summary>
         </member>
         <member name="M:Blog.Core.Controllers.LoginController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices,Blog.Core.AuthHelper.PermissionRequirement)">
@@ -340,6 +362,13 @@
             <param name="sub"></param>
             <param name="expiresSliding"></param>
             <param name="expiresAbsoulute"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Blog.Core.Controllers.LoginController.Md5Password(System.String)">
+            <summary>
+            测试 MD5 加密字符串
+            </summary>
+            <param name="password"></param>
             <returns></returns>
         </member>
         <member name="T:Blog.Core.Controllers.ModuleController">
@@ -442,7 +471,7 @@
         </member>
         <member name="M:Blog.Core.Controllers.PermissionController.GetPermissionIdByRoleId(System.Int32)">
             <summary>
-            通过角色获取菜单
+            通过角色获取菜单【无权限】
             </summary>
             <param name="rid"></param>
             <returns></returns>
@@ -503,7 +532,7 @@
         </member>
         <member name="T:Blog.Core.Controllers.TopicController">
             <summary>
-            类别管理
+            类别管理【无权限】
             </summary>
         </member>
         <member name="M:Blog.Core.Controllers.TopicController.#ctor(Blog.Core.IServices.ITopicServices)">
@@ -533,6 +562,7 @@
         <member name="M:Blog.Core.Controllers.TopicDetailController.Get(System.Int32,System.String,System.String)">
             <summary>
             获取Bug数据列表（带分页）
+            【无权限】
             </summary>
             <param name="page">页数</param>
             <param name="tname">专题类型</param>
@@ -572,13 +602,14 @@
             用户管理
             </summary>
         </member>
-        <member name="M:Blog.Core.Controllers.UserController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices)">
+        <member name="M:Blog.Core.Controllers.UserController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices,Blog.Core.Common.HttpContextUser.IUser)">
             <summary>
             构造函数
             </summary>
             <param name="sysUserInfoServices"></param>
             <param name="userRoleServices"></param>
             <param name="roleServices"></param>
+            <param name="user"></param>
         </member>
         <member name="M:Blog.Core.Controllers.UserController.Get(System.Int32,System.String)">
             <summary>
@@ -591,6 +622,7 @@
         <member name="M:Blog.Core.Controllers.UserController.GetInfoByToken(System.String)">
             <summary>
             获取用户详情根据token
+            【无权限】
             </summary>
             <param name="token">令牌</param>
             <returns></returns>
@@ -619,6 +651,7 @@
         <member name="T:Blog.Core.Controllers.UserRoleController">
             <summary>
             用户角色关系
+            【无权限】
             </summary>
         </member>
         <member name="M:Blog.Core.Controllers.UserRoleController.#ctor(Blog.Core.IServices.ISysUserInfoServices,Blog.Core.IServices.IUserRoleServices,Blog.Core.IServices.IRoleServices)">
@@ -694,11 +727,19 @@
             <param name="ClaimType">声明类型，默认 jti </param>
             <returns></returns>
         </member>
-        <member name="M:Blog.Core.Controllers.ValuesController.Post(Blog.Core.Model.Models.BlogArticle)">
+        <member name="M:Blog.Core.Controllers.ValuesController.Post(Blog.Core.Model.Models.BlogArticle,System.Int32)">
             <summary>
-            测试 post 一个对象
+            测试 post 一个对象 + 独立参数
             </summary>
             <param name="blogArticle">model实体类参数</param>
+            <param name="id">独立参数</param>
+        </member>
+        <member name="M:Blog.Core.Controllers.ValuesController.TestPostPara(System.String)">
+            <summary>
+            测试 post 参数
+            </summary>
+            <param name="name"></param>
+            <returns></returns>
         </member>
         <member name="M:Blog.Core.Controllers.ValuesController.Put(System.Int32,System.String)">
             <summary>
@@ -712,6 +753,19 @@
             Delete方法
             </summary>
             <param name="id"></param>
+        </member>
+        <member name="T:Blog.Core.Filter.GlobalRouteAuthorizeConvention">
+            <summary>
+            Summary:全局路由权限公约
+            Remarks:目的是针对不同的路由，采用不同的授权过滤器
+            如果 controller 上不加 [Authorize] 特性，默认都是 Permission 策略
+            否则，如果想特例其他授权机制的话，需要在 controller 上带上  [Authorize]，然后再action上自定义授权即可，比如 [Authorize(Roles = "Admin")]
+            </summary>
+        </member>
+        <member name="T:Blog.Core.Filter.GlobalAuthorizeFilter">
+            <summary>
+            全局权限过滤器【无效】
+            </summary>
         </member>
         <member name="T:Blog.Core.Filter.GlobalExceptionsFilter">
             <summary>
@@ -736,7 +790,29 @@
             开发环境的消息
             </summary>
         </member>
-        <member name="P:Blog.Core.Startup.repository">
+        <member name="T:Blog.Core.Filter.GlobalRoutePrefixFilter">
+            <summary>
+            全局路由前缀公约
+            </summary>
+        </member>
+        <member name="T:Blog.Core.Middlewares.RequRespLogMildd">
+            <summary>
+            中间件
+            记录请求和响应数据
+            </summary>
+        </member>
+        <member name="F:Blog.Core.Middlewares.RequRespLogMildd._next">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Blog.Core.Middlewares.RequRespLogMildd.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+            <summary>
+            
+            </summary>
+            <param name="next"></param>
+        </member>
+        <member name="P:Blog.Core.Startup.Repository">
             <summary>
             log4net 仓储库
             </summary>

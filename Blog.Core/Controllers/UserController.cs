@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Blog.Core.AuthHelper.OverWrite;
 using Blog.Core.Common.Helper;
+using Blog.Core.Common.HttpContextUser;
 using Blog.Core.IServices;
 using Blog.Core.Model;
 using Blog.Core.Model.Models;
@@ -17,12 +18,12 @@ namespace Blog.Core.Controllers
     /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [Authorize(PermissionNames.Permission)]
     public class UserController : ControllerBase
     {
         readonly ISysUserInfoServices _sysUserInfoServices;
         readonly IUserRoleServices _userRoleServices;
         readonly IRoleServices _roleServices;
+        private readonly IUser _user;
 
         /// <summary>
         /// 构造函数
@@ -30,11 +31,13 @@ namespace Blog.Core.Controllers
         /// <param name="sysUserInfoServices"></param>
         /// <param name="userRoleServices"></param>
         /// <param name="roleServices"></param>
-        public UserController(ISysUserInfoServices sysUserInfoServices, IUserRoleServices userRoleServices, IRoleServices roleServices)
+        /// <param name="user"></param>
+        public UserController(ISysUserInfoServices sysUserInfoServices, IUserRoleServices userRoleServices, IRoleServices roleServices, IUser user)
         {
             _sysUserInfoServices = sysUserInfoServices;
             _userRoleServices = userRoleServices;
             _roleServices = roleServices;
+            _user = user;
         }
 
         /// <summary>
@@ -45,6 +48,7 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         // GET: api/User
         [HttpGet]
+        [ResponseCache(Duration = 60)]
         public async Task<MessageModel<PageModel<sysUserInfo>>> Get(int page = 1, string key = "")
         {
             if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
@@ -91,6 +95,7 @@ namespace Blog.Core.Controllers
         // GET: api/User/5
         /// <summary>
         /// 获取用户详情根据token
+        /// 【无权限】
         /// </summary>
         /// <param name="token">令牌</param>
         /// <returns></returns>
@@ -129,6 +134,7 @@ namespace Blog.Core.Controllers
             var data = new MessageModel<string>();
 
             sysUserInfo.uLoginPWD= MD5Helper.MD5Encrypt32(sysUserInfo.uLoginPWD);
+            sysUserInfo.uRemark = _user.Name;
 
             var id = await _sysUserInfoServices.Add(sysUserInfo);
             data.success = id > 0;

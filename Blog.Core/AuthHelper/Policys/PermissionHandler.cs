@@ -1,7 +1,10 @@
 ﻿using Blog.Core.IServices;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using System;
 using System.Linq;
 using System.Security.Claims;
@@ -23,7 +26,7 @@ namespace Blog.Core.AuthHelper
         /// <summary>
         /// services 层注入
         /// </summary>
-        public IRoleModulePermissionServices roleModulePermissionServices { get; set; }
+        public IRoleModulePermissionServices RoleModulePermissionServices { get; set; }
 
         /// <summary>
         /// 构造函数注入
@@ -33,14 +36,14 @@ namespace Blog.Core.AuthHelper
         public PermissionHandler(IAuthenticationSchemeProvider schemes, IRoleModulePermissionServices roleModulePermissionServices)
         {
             Schemes = schemes;
-            this.roleModulePermissionServices = roleModulePermissionServices;
+            this.RoleModulePermissionServices = roleModulePermissionServices;
         }
 
         // 重载异步处理程序
         protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
         {
             // 将最新的角色和接口列表更新
-            var data = await roleModulePermissionServices.GetRoleModule();
+            var data = await RoleModulePermissionServices.GetRoleModule();
             var list = (from item in data
                         where item.IsDeleted == false
                         orderby item.Id
@@ -54,6 +57,7 @@ namespace Blog.Core.AuthHelper
 
 
             //从AuthorizationHandlerContext转成HttpContext，以便取出表求信息
+            var filterContext = (context.Resource as Microsoft.AspNetCore.Mvc.Filters.AuthorizationFilterContext);
             var httpContext = (context.Resource as Microsoft.AspNetCore.Mvc.Filters.AuthorizationFilterContext)?.HttpContext;
             //请求Url
             if (httpContext != null)
@@ -65,8 +69,17 @@ namespace Blog.Core.AuthHelper
                 {
                     if (await handlers.GetHandlerAsync(httpContext, scheme.Name) is IAuthenticationRequestHandler handler && await handler.HandleRequestAsync())
                     {
-                        context.Fail();
+                        //context.Fail();
+                        //return;
+
+
+                        //自定义返回数据
+                        var payload = JsonConvert.SerializeObject(new { Code = "401", Message = "很抱歉，您无权访问该接口!" });
+                        httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        filterContext.Result = new JsonResult(payload);
+                        context.Succeed(requirement);
                         return;
+
                     }
                 }
                 //判断请求是否拥有凭据，即有没有登录
@@ -131,10 +144,22 @@ namespace Blog.Core.AuthHelper
                             if (currentUserRoles.Count <= 0 || !isMatchRole)
                             {
 
-                                context.Fail();
-                                return;
-                                // 可以在这里设置跳转页面，不过还是会访问当前接口地址的
+
+                                // 可以在这里设置跳转页面
                                 //httpContext.Response.Redirect(requirement.DeniedAction);
+                                //context.Succeed(requirement);
+                                //return;
+
+
+
+                                //自定义返回数据
+                                var payload = JsonConvert.SerializeObject(new { Code = "403", Message = "很抱歉，您无权访问该接口!" });
+                                httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
+                                filterContext.Result = new JsonResult(payload);
+                                context.Succeed(requirement);
+                                return;
+
+
                             }
                         }
                         //else
@@ -150,7 +175,15 @@ namespace Blog.Core.AuthHelper
                         }
                         else
                         {
-                            context.Fail();
+                            //context.Fail();
+                            //return;
+
+
+                            //自定义返回数据
+                            var payload = JsonConvert.SerializeObject(new { Code = "401", Message = "很抱歉，您无权访问该接口!" });
+                            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            filterContext.Result = new JsonResult(payload);
+                            context.Succeed(requirement);
                             return;
                         }
                         return;
@@ -160,8 +193,14 @@ namespace Blog.Core.AuthHelper
                 if (!questUrl.Equals(requirement.LoginPath.ToLower(), StringComparison.Ordinal) && (!httpContext.Request.Method.Equals("POST")
                                                                                                     || !httpContext.Request.HasFormContentType))
                 {
-                    context.Fail();
-                    return;
+                    //context.Fail();
+                    //return;
+
+
+                    //自定义返回数据
+                    var payload = JsonConvert.SerializeObject(new { Code = "401", Message = "很抱歉，您无权访问该接口!" });
+                    httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    filterContext.Result = new JsonResult(payload);
                 }
             }
 

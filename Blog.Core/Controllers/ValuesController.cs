@@ -22,6 +22,7 @@ namespace Blog.Core.Controllers
     //[Authorize(Roles = "Admin,Client")]
     //[Authorize(Policy = "SystemOrAdmin")]
     //[Authorize(PermissionNames.Permission)]
+    [AllowAnonymous]
     public class ValuesController : ControllerBase
     {
         private IMapper _mapper;
@@ -54,12 +55,17 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         // GET api/values
         [HttpGet]
-        [AllowAnonymous]
         public async Task<MessageModel<ResponseEnum>> Get()
         {
             var data = new MessageModel<ResponseEnum>();
 
-            var list = await _roleModulePermissionServices.TestModelWithChildren();
+            var roleModulePermissions = await _roleModulePermissionServices.QueryMuchTable();
+
+            var roleModuleTask = _roleModulePermissionServices.Query();
+            var listTask = _advertisementServices.Query();
+
+            var ad = await roleModuleTask;
+            var list = await listTask;
 
 
             _advertisementServices.ReturnExp();
@@ -76,7 +82,6 @@ namespace Blog.Core.Controllers
         /// <returns></returns>
         // GET api/values/5
         [HttpGet("{id}")]
-        [AllowAnonymous]
         public ActionResult<string> Get(int id)
         {
             var loveu = _love.SayLoveU();
@@ -116,15 +121,30 @@ namespace Blog.Core.Controllers
 
 
         /// <summary>
-        /// 测试 post 一个对象
+        /// 测试 post 一个对象 + 独立参数
         /// </summary>
         /// <param name="blogArticle">model实体类参数</param>
+        /// <param name="id">独立参数</param>
         [HttpPost]
-        [AllowAnonymous]
-        public object Post([FromBody]  BlogArticle blogArticle)
+        public object Post([FromBody]  BlogArticle blogArticle, int id)
         {
-            return Ok(new { success = true, data = blogArticle });
+            return Ok(new { success = true, data = blogArticle, id = id });
         }
+
+
+        /// <summary>
+        /// 测试 post 参数
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [Route("TestPostPara")]
+        public object TestPostPara(string name)
+        {
+            return Ok(new { success = true, name = name });
+        }
+
+
         /// <summary>
         /// Put方法
         /// </summary>

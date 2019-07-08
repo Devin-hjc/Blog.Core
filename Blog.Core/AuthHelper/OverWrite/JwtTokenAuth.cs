@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.Builder;
 namespace Blog.Core.AuthHelper
 {
     /// <summary>
-    /// 
+    /// 中间件
+    /// 原做为自定义授权中间件
+    /// 先做检查 header token的使用
     /// </summary>
     public class JwtTokenAuth
     {
@@ -30,12 +32,12 @@ namespace Blog.Core.AuthHelper
 
         private void PreProceed(HttpContext next)
         {
-            Console.WriteLine($"{DateTime.Now} middleware invoke preproceed");
+            //Console.WriteLine($"{DateTime.Now} middleware invoke preproceed");
             //...
         }
         private void PostProceed(HttpContext next)
         {
-            Console.WriteLine($"{DateTime.Now} middleware invoke postproceed");
+            //Console.WriteLine($"{DateTime.Now} middleware invoke postproceed");
             //....
         }
 
@@ -63,15 +65,16 @@ namespace Blog.Core.AuthHelper
             {
                 if (tokenHeader.Length >= 128)
                 {
+                    //Console.WriteLine($"{DateTime.Now} token :{tokenHeader}");
                     TokenModelJwt tm = JwtHelper.SerializeJwt(tokenHeader);
 
                     //授权
-                    var claimList = new List<Claim>();
-                    var claim = new Claim(ClaimTypes.Role, tm.Role);
-                    claimList.Add(claim);
-                    var identity = new ClaimsIdentity(claimList);
-                    var principal = new ClaimsPrincipal(identity);
-                    httpContext.User = principal;
+                    //var claimList = new List<Claim>();
+                    //var claim = new Claim(ClaimTypes.Role, tm.Role);
+                    //claimList.Add(claim);
+                    //var identity = new ClaimsIdentity(claimList);
+                    //var principal = new ClaimsPrincipal(identity);
+                    //httpContext.User = principal;
                 }
 
             }
@@ -89,12 +92,5 @@ namespace Blog.Core.AuthHelper
 
     }
 
-    public static class MiddlewareHelpers
-    {
-        public static IApplicationBuilder UseJwtTokenAuth(this IApplicationBuilder app)
-        {
-            return app.UseMiddleware<JwtTokenAuth>();
-        }
-    }
 }
 

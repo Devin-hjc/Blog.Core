@@ -15,7 +15,6 @@ namespace Blog.Core.Controllers
     /// </summary>
     [Route("api/[controller]/[action]")]
     [ApiController]
-    [Authorize(PermissionNames.Permission)]
     public class TopicDetailController : ControllerBase
     {
         readonly ITopicServices _topicServices;
@@ -34,6 +33,7 @@ namespace Blog.Core.Controllers
 
         /// <summary>
         /// 获取Bug数据列表（带分页）
+        /// 【无权限】
         /// </summary>
         /// <param name="page">页数</param>
         /// <param name="tname">专题类型</param>
@@ -43,6 +43,7 @@ namespace Blog.Core.Controllers
         [AllowAnonymous]
         public async Task<MessageModel<PageModel<TopicDetail>>> Get(int page = 1, string tname = "", string key = "")
         {
+            int tid = 0;
 
             if (string.IsNullOrEmpty(key) || string.IsNullOrWhiteSpace(key))
             {
@@ -54,10 +55,15 @@ namespace Blog.Core.Controllers
             }
             tname = UnicodeHelper.UnicodeToString(tname);
 
+            if (!string.IsNullOrEmpty(tname))
+            {
+                tid = ((await _topicServices.Query(ts => ts.tName == tname)).FirstOrDefault()?.Id).ObjToInt();
+            }
+
             int intPageSize = 6;
 
-            
-            var data = await _topicDetailServices.QueryPage(a => !a.tdIsDelete && a.tdSectendDetail == "tbug" && ((a.tdName != null && a.tdName.Contains(key)) || (a.tdDetail != null && a.tdDetail.Contains(key))), page, intPageSize, " Id desc ");
+
+            var data = await _topicDetailServices.QueryPage(a => !a.tdIsDelete && a.tdSectendDetail == "tbug" && ((tid == 0 && true) || (tid > 0 && a.TopicId == tid)) && ((a.tdName != null && a.tdName.Contains(key)) || (a.tdDetail != null && a.tdDetail.Contains(key))), page, intPageSize, " Id desc ");
 
 
 
@@ -81,8 +87,8 @@ namespace Blog.Core.Controllers
         public async Task<MessageModel<TopicDetail>> Get(int id)
         {
             var data = new MessageModel<TopicDetail>();
-            var response = await _topicDetailServices.QueryById(id);
-            data.response = response.tdIsDelete ? null : response;
+            var response = id > 0 ? await _topicDetailServices.QueryById(id) : new TopicDetail();
+            data.response = (response?.tdIsDelete).ObjToBool() ? new TopicDetail() : response;
             if (data.response != null)
             {
                 data.success = true;

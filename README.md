@@ -3,7 +3,7 @@
 ![Logo](https://github.com/anjoy8/Blog.Core/blob/master/Blog.Core/wwwroot/logocore.png)
 
 
-从零开始搭建自己的前后端分离【 .NET Core2.1 Api + Vue 2.0 】框架，目前是2.2版本，各个版本见分支(注意其他分支不全，请使用主分支)。
+从零开始搭建自己的前后端分离【 .NET Core2.2 Api + Vue 2.x 】框架。（🔒目前是2.2版本，因作者开源的项目较多，维护成本过高，所以本项目其他分支不再提供支持🔒）
 
 如果你感觉看着这整个项目比较费劲，我单抽出来了几个子Demo，方便学习，项目地址 ：[https://github.com/anjoy8/BlogArti](https://github.com/anjoy8/BlogArti)
 
@@ -99,7 +99,8 @@ https://www.cnblogs.com/laozhang-is-phi/p/9554210.html#autoid-3-4-0
 或者来群里，群文件的是最新的。
 
 
-6、如果想单独查看关于【JWT授权】的相关内容，可以在wwwroot 文件夹中找到【Autho.jwt.rar】，我单拎出来的一个demo。
+6、如果想单独查看关于【JWT授权】的相关内容，可以访问 https://github.com/anjoy8/BlogArti/tree/master/Blog.Core_JWT，
+   我单拎出来的一个demo。
 
 
 7、项目后期发布的时候可以有两个办法，一种是dotnet的kestrel部署，另一种是 IIS 发布部署，但是在发布的时候，
@@ -185,6 +186,7 @@ File.ReadAllText(@"D:\my-file\dbCountPsw2.txt").Trim(): "server=.;uid=sa;pwd=sa;
 
 <li><a href="https://www.cnblogs.com/laozhang-is-phi/p/10462316.html">42&nbsp;</a><a id="post_title_link_9767400" href="https://www.cnblogs.com/laozhang-is-phi/p/9767400.html">║</a><a id="post_title_link_10462316" href="https://www.cnblogs.com/laozhang-is-phi/p/10462316.html"> 完美实现 JWT 滑动授权刷新</a></li>
 <li><a id="post_title_link_10718755" href="https://www.cnblogs.com/laozhang-is-phi/p/10718755.html">43 ║ 支持多种数据库 &amp; 快速数据库生成</a></li>
+<li><a id="post_title_link_10836887" href="https://www.cnblogs.com/laozhang-is-phi/p/beautifulPublish-mostBugs.html">43 ║最全的部署方案 &amp; 最丰富的错误分析【再会】</a></li>
 
 
 
