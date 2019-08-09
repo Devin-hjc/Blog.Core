@@ -1,4 +1,5 @@
-﻿using Blog.Core.Common.LogHelper;
+﻿using Blog.Core.Common;
+using Blog.Core.Common.LogHelper;
 using Blog.Core.Log;
 using SqlSugar;
 using StackExchange.Profiling;
@@ -96,9 +97,11 @@ namespace Blog.Core.Repository
             {
                 Parallel.For(0, 1, e =>
                 {
-                    MiniProfiler.Current.CustomTiming("SQL：", GetParas(pars) + "【SQL语句】：" + sql);
-                    LogLock.OutSql2Log("SqlLog", new string[] { GetParas(pars), "【SQL语句】：" + sql });
-
+                    if (Appsettings.app(new string[] { "AppSettings", "LogSQL", "Enabled" }).ObjToBool())
+                    {
+                        MiniProfiler.Current.CustomTiming("SQL：", GetParas(pars) + "【SQL语句】：" + sql);
+                        LogLock.OutSql2Log("SqlLog", new string[] { GetParas(pars), "【SQL语句】：" + sql });
+                    }
                 });
             };
 

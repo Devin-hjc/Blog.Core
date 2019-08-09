@@ -216,8 +216,8 @@ namespace Blog.Core
 
             #region TimedJob
 
-            services.AddHostedService<Job1TimedService>();
-            services.AddHostedService<Job2TimedService>();
+            //services.AddHostedService<Job1TimedService>();
+            //services.AddHostedService<Job2TimedService>();
 
             #endregion
 

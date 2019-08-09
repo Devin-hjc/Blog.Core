@@ -16,6 +16,7 @@ namespace Blog.Core.Common.DB
         private static string oracleConnection = Appsettings.app(new string[] { "AppSettings", "Oracle", "OracleConnection" });
         private static bool IsOracleEnabled = (Appsettings.app(new string[] { "AppSettings", "Oracle", "Enabled" })).ObjToBool();
 
+        private static string sqlConnection = string.Empty;
 
         public static string ConnectionString => InitConn();
         public static DataBaseType DbType = DataBaseType.SqlServer;
@@ -23,31 +24,39 @@ namespace Blog.Core.Common.DB
 
         private static string InitConn()
         {
+            if (!string.IsNullOrEmpty(sqlConnection)) {
+                return sqlConnection;
+            }
+
             if (isSqliteEnabled)
             {
                 DbType = DataBaseType.Sqlite;
-                return sqliteConnection;
+                sqlConnection = sqliteConnection;
             }
             else if (isSqlServerEnabled)
             {
                 DbType = DataBaseType.SqlServer;
-                return DifDBConnOfSecurity(@"D:\my-file\dbCountPsw1.txt", @"c:\my-file\dbCountPsw1.txt", sqlServerConnection);
+                //sqlConnection = DifDBConnOfSecurity(@"D:\my-file\dbCountPsw1.txt", @"c:\my-file\dbCountPsw1.txt", sqlServerConnection);
+                sqlConnection = sqlServerConnection;
             }
             else if (isMySqlEnabled)
             {
                 DbType = DataBaseType.MySql;
-                return DifDBConnOfSecurity(@"D:\my-file\dbCountPsw1_MySqlConn.txt", @"c:\my-file\dbCountPsw1_MySqlConn.txt", mySqlConnection);
+                //sqlConnection = DifDBConnOfSecurity(@"D:\my-file\dbCountPsw1_MySqlConn.txt", @"c:\my-file\dbCountPsw1_MySqlConn.txt", mySqlConnection);
+                sqlConnection = mySqlConnection;
             }
             else if (IsOracleEnabled)
             {
                 DbType = DataBaseType.Oracle;
-                return DifDBConnOfSecurity(@"D:\my-file\dbCountPsw1_OracleConn.txt", @"c:\my-file\dbCountPsw1_OracleConn.txt", oracleConnection);
+                //sqlConnection = DifDBConnOfSecurity(@"D:\my-file\dbCountPsw1_OracleConn.txt", @"c:\my-file\dbCountPsw1_OracleConn.txt", oracleConnection);
+                sqlConnection = oracleConnection;
             }
-            else
-            {
-                return "server=.;uid=sa;pwd=sa;database=WMBlogDB";
-            }
+            //else
+            //{
+            //    return "server=.;uid=sa;pwd=sa;database=WMBlogDB";
+            //}
 
+            return sqlConnection;
         }
         private static string DifDBConnOfSecurity(params string[] conn)
         {
