@@ -26,6 +26,17 @@
 
 ### 初始项目
 
+#### 不要再使用 .sql 文件了，不更新了，用下边动图的方法，直接 seed data.
+
+数据查看：[Blog.Core.Data.json](https://github.com/anjoy8/Blog.Data.Share/tree/master/Blog.Core.Data.json)
+
+文章讲解：[支持多种数据库 & 快速数据库生成](https://www.cnblogs.com/laozhang-is-phi/p/10718755.html)
+ 
+&nbsp;
+
+ 
+
+
 ![操作流程](https://github.com/anjoy8/Blog.Core/blob/master/Blog.Core/wwwroot/operateFlow.gif)
 
 
